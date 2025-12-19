@@ -30,7 +30,7 @@ type Props = {
 const getToday = () => new Date().toISOString().slice(0, 10);
 
 export function CalendarView({ events, selectedDate, onDateClick, onEventClick }: Props) {
-  const calendarRef = useRef<{ getApi: () => CalendarApi } | null>(null);
+  const [calendarApi, setCalendarApi] = useState<CalendarApi | null>(null);
   const [currentDate, setCurrentDate] = useState<Date>(() => {
     const date = new Date(`${selectedDate}T00:00:00`);
     return date;
@@ -41,29 +41,21 @@ export function CalendarView({ events, selectedDate, onDateClick, onEventClick }
   };
 
   const handlePrevMonth = () => {
-    const api = calendarRef.current?.getApi();
-    if (api) {
-      api.prev();
-      const view = api.view;
-      setCurrentDate(view.activeStart);
+    if (calendarApi) {
+      calendarApi.prev();
     }
   };
 
   const handleNextMonth = () => {
-    const api = calendarRef.current?.getApi();
-    if (api) {
-      api.next();
-      const view = api.view;
-      setCurrentDate(view.activeStart);
+    if (calendarApi) {
+      calendarApi.next();
     }
   };
 
   const handleToday = () => {
-    const api = calendarRef.current?.getApi();
-    if (api) {
+    if (calendarApi) {
       const today = getToday();
-      api.gotoDate(today);
-      setCurrentDate(new Date(`${today}T00:00:00`));
+      calendarApi.gotoDate(today);
     }
   };
 
@@ -96,7 +88,6 @@ export function CalendarView({ events, selectedDate, onDateClick, onEventClick }
         </button>
       </div>
       <FullCalendar
-        ref={calendarRef}
         plugins={[dayGridPlugin, interactionPlugin]}
         initialView="dayGridMonth"
         height="auto"
@@ -108,7 +99,19 @@ export function CalendarView({ events, selectedDate, onDateClick, onEventClick }
         headerToolbar={false}
         dayCellClassNames={(arg) => (arg.dateStr === selectedDate ? "fc-day-selected" : "")}
         datesSet={(arg) => {
-          setCurrentDate(arg.start);
+          // カレンダーAPIを取得
+          if (arg.view.calendar) {
+            setCalendarApi(arg.view.calendar);
+          }
+          // 月ビューの場合、表示範囲の中央付近の日付を取得して月を判定
+          // これにより、1日が日曜日で前月の週が表示されていても正しい月を取得できる
+          const startDate = new Date(arg.start);
+          const endDate = new Date(arg.end);
+          // 表示範囲の中央の日付を取得
+          const midDate = new Date((startDate.getTime() + endDate.getTime()) / 2);
+          // その月の1日を作成（表示されている月を正確に取得）
+          const monthStart = new Date(midDate.getFullYear(), midDate.getMonth(), 1);
+          setCurrentDate(monthStart);
         }}
       />
     </div>
