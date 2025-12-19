@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import ALLOW_ORIGINS
 from app.repositories.csv_store import ensure_data_files
-from app.routers import auth, transactions
+from app.routers import auth, reports, transactions
 
 ensure_data_files()
 
@@ -24,5 +24,6 @@ def health() -> dict:
 
 
 app.include_router(auth.router)
+app.include_router(reports.router)
 app.include_router(transactions.router)
 

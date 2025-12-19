@@ -17,6 +17,7 @@ type Props = {
   onNew: () => void;
   onDelete?: () => void;
   onSelectTx: (tx: Transaction) => void;
+  onReportExisting?: () => void;
   onClose: () => void;
   formatYen: (v: number) => string;
 };
@@ -34,6 +35,7 @@ export function DayModal({
   onNew,
   onDelete,
   onSelectTx,
+  onReportExisting,
   onClose,
   formatYen,
 }: Props) {
@@ -88,33 +90,50 @@ export function DayModal({
           />
 
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h4 className="text-sm font-semibold text-zinc-700">この日のイベント</h4>
-              <span className="text-xs text-zinc-500">{dayTransactions.length}件</span>
+            <div className="rounded border border-blue-100 bg-blue-50 p-3 text-sm text-blue-800">
+              <p className="font-semibold">日記を作成</p>
+              <p className="mt-1 text-xs text-blue-700">
+                このイベントをもとに日記レポートを作成します。
+              </p>
             </div>
-            <div className="max-h-80 space-y-2 overflow-y-auto rounded border border-zinc-200 p-2">
-              {dayTransactions.length === 0 && (
-                <p className="text-sm text-zinc-500">まだ登録がありません</p>
-              )}
-              {dayTransactions.map((tx) => (
-                <button
-                  key={tx.id}
-                  className={`w-full cursor-pointer rounded border p-2 text-left transition ${
-                    form.id === tx.id
-                      ? "border-blue-400 bg-blue-50"
-                      : "border-zinc-200 hover:border-zinc-400"
-                  }`}
-                  onClick={() => onSelectTx(tx)}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium">{tx.item}</span>
-                    <span className="text-sm text-zinc-600">{formatYen(tx.amount)}</span>
-                  </div>
-                  <div className="text-xs text-zinc-500">
-                    mood: {tx.mood_score} / happy {formatYen(tx.happy_amount)}
-                  </div>
-                </button>
-              ))}
+            {form.id && onReportExisting && (
+              <button
+                className="w-full rounded border border-blue-500 px-4 py-3 text-sm font-semibold text-blue-700 hover:bg-blue-50 disabled:opacity-50"
+                onClick={onReportExisting}
+                disabled={saving}
+              >
+                このイベントの日記を作成
+              </button>
+            )}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-semibold text-zinc-700">この日のイベント</h4>
+                <span className="text-xs text-zinc-500">{dayTransactions.length}件</span>
+              </div>
+              <div className="max-h-80 space-y-2 overflow-y-auto rounded border border-zinc-200 p-2">
+                {dayTransactions.length === 0 && (
+                  <p className="text-sm text-zinc-500">まだ登録がありません</p>
+                )}
+                {dayTransactions.map((tx) => (
+                  <button
+                    key={tx.id}
+                    className={`w-full cursor-pointer rounded border p-2 text-left transition ${
+                      form.id === tx.id
+                        ? "border-blue-400 bg-blue-50"
+                        : "border-zinc-200 hover:border-zinc-400"
+                    }`}
+                    onClick={() => onSelectTx(tx)}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium">{tx.item}</span>
+                      <span className="text-sm text-zinc-600">{formatYen(tx.amount)}</span>
+                    </div>
+                    <div className="text-xs text-zinc-500">
+                      mood: {tx.mood_score} / happy {formatYen(tx.happy_amount)}
+                    </div>
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </div>

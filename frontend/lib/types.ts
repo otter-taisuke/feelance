@@ -28,3 +28,21 @@ export type MoodOption = {
   label: string;
 };
 
+export type ChatMessage = {
+  role: "user" | "assistant";
+  content: string;
+};
+
+export type ReportGenerateResponse = {
+  report_title: string;
+  report_body: string;
+};
+
+export type SaveReportResponse = {
+  event_name: string;
+  report_title: string;
+  report_body: string;
+  created_at: string;
+  user_id: string;
+};
+

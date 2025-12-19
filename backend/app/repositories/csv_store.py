@@ -6,6 +6,7 @@ from app.core.config import DATA_DIR
 
 USERS_FILE = DATA_DIR / "users.csv"
 TX_FILE = DATA_DIR / "transactions.csv"
+REPORTS_FILE = DATA_DIR / "reports.csv"
 
 
 def ensure_data_files() -> None:
@@ -15,6 +16,11 @@ def ensure_data_files() -> None:
     if not TX_FILE.exists():
         TX_FILE.write_text(
             "id,user_id,date,item,amount,mood_score,happy_amount,created_at,updated_at\n",
+            encoding="utf-8",
+        )
+    if not REPORTS_FILE.exists():
+        REPORTS_FILE.write_text(
+            "event_name,report_title,report_body,created_at,user_id\n",
             encoding="utf-8",
         )
 
@@ -38,4 +44,25 @@ def read_transactions() -> pd.DataFrame:
 
 def write_transactions(df: pd.DataFrame) -> None:
     df.to_csv(TX_FILE, index=False, date_format="%Y-%m-%dT%H:%M:%S")
+
+
+def read_reports() -> pd.DataFrame:
+    ensure_data_files()
+    df = pd.read_csv(
+        REPORTS_FILE,
+        dtype={
+            "event_name": str,
+            "report_title": str,
+            "report_body": str,
+            "user_id": str,
+        },
+        parse_dates=["created_at"],
+    )
+    if df.empty:
+        return df
+    return df
+
+
+def write_reports(df: pd.DataFrame) -> None:
+    df.to_csv(REPORTS_FILE, index=False, date_format="%Y-%m-%dT%H:%M:%S")
 

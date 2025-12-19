@@ -1,5 +1,12 @@
 import { API_BASE } from "./constants";
-import type { Transaction, TransactionForm, User } from "./types";
+import type {
+  ChatMessage,
+  ReportGenerateResponse,
+  SaveReportResponse,
+  Transaction,
+  TransactionForm,
+  User,
+} from "./types";
 
 const jsonHeaders = { "Content-Type": "application/json" };
 
@@ -121,5 +128,92 @@ export async function deleteTransaction(txId: string): Promise<void> {
   if (!res.ok) {
     await handleError(res);
   }
+}
+
+export async function getTransaction(txId: string): Promise<Transaction> {
+  const res = await fetch(`${API_BASE}/transactions/${txId}`, {
+    credentials: "include",
+  });
+  if (!res.ok) {
+    await handleError(res);
+  }
+  return res.json();
+}
+
+export async function streamReportChat(
+  txId: string,
+  messages: ChatMessage[],
+  onToken: (token: string) => void,
+  signal?: AbortSignal,
+): Promise<void> {
+  const res = await fetch(`${API_BASE}/reports/chat/stream`, {
+    method: "POST",
+    headers: jsonHeaders,
+    body: JSON.stringify({ tx_id: txId, messages }),
+    credentials: "include",
+    signal,
+  });
+  const body = res.body;
+  if (!res.ok || !body) {
+    await handleError(res);
+  }
+
+  const reader = (body as ReadableStream<Uint8Array>).getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const parts = buffer.split("\n\n");
+    buffer = parts.pop() ?? "";
+    for (const part of parts) {
+      const lines = part.split("\n");
+      for (const line of lines) {
+        if (line.startsWith("data: ")) {
+          const data = line.slice(6);
+          if (data === "[DONE]") continue;
+          onToken(data);
+        }
+      }
+    }
+  }
+}
+
+export async function generateReport(
+  txId: string,
+  messages: ChatMessage[],
+): Promise<ReportGenerateResponse> {
+  const res = await fetch(`${API_BASE}/reports/generate`, {
+    method: "POST",
+    headers: jsonHeaders,
+    body: JSON.stringify({ tx_id: txId, messages }),
+    credentials: "include",
+  });
+  if (!res.ok) {
+    await handleError(res);
+  }
+  return res.json();
+}
+
+export async function saveReport(
+  txId: string,
+  reportTitle: string,
+  reportBody: string,
+): Promise<SaveReportResponse> {
+  const res = await fetch(`${API_BASE}/reports/save`, {
+    method: "POST",
+    headers: jsonHeaders,
+    body: JSON.stringify({
+      tx_id: txId,
+      report_title: reportTitle,
+      report_body: reportBody,
+    }),
+    credentials: "include",
+  });
+  if (!res.ok) {
+    await handleError(res);
+  }
+  return res.json();
 }
 
