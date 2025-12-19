@@ -320,8 +320,15 @@ export default function Home() {
       return;
     }
     try {
-      await upsertTransaction(user.user_id, form);
-      resetForm(form.date);
+      const saved = await upsertTransaction(user.user_id, form);
+      // 保存されたトランザクションのIDを設定して編集モードに遷移
+      setForm({
+        id: saved.id,
+        date: saved.date,
+        item: saved.item,
+        amount: String(saved.amount),
+        mood_score: saved.mood_score,
+      });
     } catch {
       // error state is set in hook
     }

@@ -12,6 +12,7 @@ type Props = {
   onClose?: () => void;
   saving: boolean;
   error: string | null;
+  cancelLabel?: string;
 };
 
 export function TransactionForm({
@@ -24,6 +25,7 @@ export function TransactionForm({
   onClose,
   saving,
   error,
+  cancelLabel,
 }: Props) {
   const moodScale = [-2, -1, 0, 1, 2];
 
@@ -122,7 +124,7 @@ export function TransactionForm({
             onClick={onNew}
             type="button"
           >
-            新規入力に切替
+            {cancelLabel || "新規入力に切替"}
           </button>
         ) : (
           onClose && (
@@ -131,7 +133,7 @@ export function TransactionForm({
               onClick={onClose}
               type="button"
             >
-              キャンセル
+              イベント一覧
             </button>
           )
         )}
