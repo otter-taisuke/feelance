@@ -114,25 +114,41 @@ export function DayModal({
                 {dayTransactions.length === 0 && (
                   <p className="text-sm text-zinc-500">まだ登録がありません</p>
                 )}
-                {dayTransactions.map((tx) => (
-                  <button
-                    key={tx.id}
-                    className={`w-full cursor-pointer rounded border p-2 text-left transition ${
-                      form.id === tx.id
-                        ? "border-blue-400 bg-blue-50"
-                        : "border-zinc-200 hover:border-zinc-400"
-                    }`}
-                    onClick={() => onSelectTx(tx)}
-                  >
+                {dayTransactions.map((tx) => {
+                  const isSelected = form.id === tx.id;
+                  // ハッピーマネーの値に応じてスタイルを決定
+                  const getHappyMoneyStyle = () => {
+                    if (tx.happy_amount > 0) {
+                      // プラス：選択時はより濃い青
+                      return isSelected ? "border-blue-600 bg-blue-100" : "border-blue-500 bg-blue-50";
+                    } else if (tx.happy_amount < 0) {
+                      // マイナス：選択時はより濃い赤
+                      return isSelected ? "border-red-600 bg-red-100" : "border-red-500 bg-red-50";
+                    } else {
+                      // 0：選択時はより濃い灰色
+                      return isSelected ? "border-gray-700 bg-gray-200" : "border-black bg-gray-100";
+                    }
+                  };
+                  return (
+                    <button
+                      key={tx.id}
+                      className={`w-full cursor-pointer rounded p-2 text-left transition ${
+                        isSelected ? "border-2" : "border"
+                      } ${getHappyMoneyStyle()}`}
+                      onClick={() => onSelectTx(tx)}
+                    >
                     <div className="flex items-center justify-between">
                       <span className="font-medium">{tx.item}</span>
-                      <span className="text-sm text-zinc-600">{formatYen(tx.amount)}</span>
-                    </div>
-                    <div className="text-xs text-zinc-500">
-                      mood: {tx.mood_score} / happy {formatYen(tx.happy_amount)}
+                      <div className="flex flex-col items-end">
+                        <span className="text-sm text-zinc-600 whitespace-nowrap">
+                          {tx.happy_amount >= 0 ? "+" : ""}{tx.happy_amount.toLocaleString("ja-JP")}
+                        </span>
+                        <span className="text-xs text-zinc-500">{formatYen(tx.amount)}</span>
+                      </div>
                     </div>
                   </button>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </div>
