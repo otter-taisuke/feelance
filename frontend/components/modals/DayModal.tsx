@@ -39,6 +39,17 @@ export function DayModal({
 }: Props) {
   if (!open) return null;
 
+  // 日付をyyyy/mm/dd（曜日）形式にフォーマット
+  const formatDateWithWeekday = (dateStr: string) => {
+    const date = new Date(`${dateStr}T00:00:00`);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    const weekdays = ["日", "月", "火", "水", "木", "金", "土"];
+    const weekday = weekdays[date.getDay()];
+    return `${year}/${month}/${day}（${weekday}）`;
+  };
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 p-4"
@@ -52,13 +63,13 @@ export function DayModal({
         aria-modal="true"
       >
         <div className="flex items-center justify-between gap-3">
-          <h3 className="text-lg font-semibold">{selectedDate} のイベント</h3>
+          <h3 className="text-lg font-semibold">{formatDateWithWeekday(selectedDate)}</h3>
           {form.id && (
             <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
               編集モード
             </span>
           )}
-          <button onClick={onClose} className="text-sm text-zinc-500">
+          <button onClick={onClose} className="text-sm text-zinc-500 hover:font-bold">
             閉じる
           </button>
         </div>
@@ -71,6 +82,7 @@ export function DayModal({
             onSave={onSave}
             onNew={onNew}
             onDelete={onDelete}
+            onClose={onClose}
             saving={saving}
             error={error}
           />

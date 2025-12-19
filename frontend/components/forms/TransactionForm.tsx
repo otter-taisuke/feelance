@@ -9,6 +9,7 @@ type Props = {
   onSave: () => void;
   onNew: () => void;
   onDelete?: () => void;
+  onClose?: () => void;
   saving: boolean;
   error: string | null;
 };
@@ -20,6 +21,7 @@ export function TransactionForm({
   onSave,
   onNew,
   onDelete,
+  onClose,
   saving,
   error,
 }: Props) {
@@ -119,13 +121,25 @@ export function TransactionForm({
         >
           {saving ? "保存中..." : form.id ? "更新する" : "追加する"}
         </button>
-        <button
-          className="rounded border border-zinc-300 px-3 py-2 text-sm"
-          onClick={onNew}
-          type="button"
-        >
-          新規入力に切替
-        </button>
+        {form.id ? (
+          <button
+            className="rounded border border-zinc-300 px-3 py-2 text-sm"
+            onClick={onNew}
+            type="button"
+          >
+            新規入力に切替
+          </button>
+        ) : (
+          onClose && (
+            <button
+              className="rounded border border-zinc-300 px-3 py-2 text-sm"
+              onClick={onClose}
+              type="button"
+            >
+              キャンセル
+            </button>
+          )
+        )}
         {form.id && onDelete && (
           <button
             className="text-sm text-red-600"
