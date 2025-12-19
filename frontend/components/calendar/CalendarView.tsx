@@ -25,11 +25,25 @@ type Props = {
   selectedDate: string;
   onDateClick: (dateStr: string) => void;
   onEventClick: (eventId: string) => void;
+  onMonthChange?: (year: number, month: number) => void;
 };
 
-const getToday = () => new Date().toISOString().slice(0, 10);
+const formatDateLocal = (date: Date) => {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+};
 
-export function CalendarView({ events, selectedDate, onDateClick, onEventClick }: Props) {
+const getToday = () => formatDateLocal(new Date());
+
+export function CalendarView({
+  events,
+  selectedDate,
+  onDateClick,
+  onEventClick,
+  onMonthChange,
+}: Props) {
   const [calendarApi, setCalendarApi] = useState<CalendarApi | null>(null);
   const [currentDate, setCurrentDate] = useState<Date>(() => {
     const date = new Date(`${selectedDate}T00:00:00`);
@@ -112,6 +126,7 @@ export function CalendarView({ events, selectedDate, onDateClick, onEventClick }
           // その月の1日を作成（表示されている月を正確に取得）
           const monthStart = new Date(midDate.getFullYear(), midDate.getMonth(), 1);
           setCurrentDate(monthStart);
+          onMonthChange?.(monthStart.getFullYear(), monthStart.getMonth());
         }}
       />
     </div>
