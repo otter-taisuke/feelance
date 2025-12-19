@@ -35,6 +35,16 @@ body {
   font-weight: 700;
 }
 
+/* FullCalendar ホバー時の強調 */
+.fc-daygrid-day:hover {
+  background-color: #f3f4f6;
+  cursor: pointer;
+}
+.fc-daygrid-day:hover .fc-daygrid-day-number {
+  color: #111827;
+  font-weight: 600;
+}
+
 /* 数値入力のステッパー非表示 */
 input[type="number"]::-webkit-outer-spin-button,
 input[type="number"]::-webkit-inner-spin-button {
