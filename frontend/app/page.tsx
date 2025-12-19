@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Bar,
   BarChart,
@@ -15,6 +16,7 @@ import {
 import { LoginPanel } from "@/components/auth/LoginPanel";
 import { CalendarView } from "@/components/calendar/CalendarView";
 import { DayModal } from "@/components/modals/DayModal";
+import { ReportSelectEventModal } from "@/components/modals/ReportSelectEventModal";
 import { useTransactions } from "@/hooks/useTransactions";
 import { login, logout, me } from "@/lib/api";
 import { moodOptions } from "@/lib/constants";
@@ -31,10 +33,12 @@ type HappyStats = { data: HappyStatDatum[]; total: number; label: string };
 const getToday = () => new Date().toISOString().slice(0, 10);
 
 export default function Home() {
+  const router = useRouter();
   const [userIdInput, setUserIdInput] = useState("");
   const [user, setUser] = useState<User | null>(null);
   const [selectedDate, setSelectedDate] = useState<string>(() => getToday());
   const [showModal, setShowModal] = useState(false);
+  const [showReportSelectModal, setShowReportSelectModal] = useState(false);
   const [form, setForm] = useState<TransactionForm>({
     date: getToday(),
     item: "",
@@ -253,6 +257,28 @@ export default function Home() {
 
   const startNewEntry = () => resetForm(selectedDate);
 
+  const handleSaveAndReport = async () => {
+    if (!user) return;
+    if (!form.item || !form.amount || !form.date) {
+      setError("日付・商品名・金額は必須です");
+      return;
+    }
+    try {
+      const saved = await upsertTransaction(user.user_id, form);
+      setShowModal(false);
+      router.push(`/reports/create?tx_id=${saved.id}`);
+      resetForm(saved.date);
+    } catch {
+      // handled in hook
+    }
+  };
+
+  const handleReportExisting = () => {
+    if (!form.id) return;
+    setShowModal(false);
+    router.push(`/reports/create?tx_id=${form.id}`);
+  };
+
   const handleEventClick = (eventId: string) => {
     const target = transactions.find((t) => t.id === eventId);
     if (!target) return;
@@ -326,6 +352,16 @@ export default function Home() {
             </div>
 
             <div className="rounded-lg bg-white p-4 shadow-sm">
+              <div className="mb-3 flex items-center justify-between">
+                <h2 className="text-lg font-semibold">カレンダー</h2>
+                <button
+                  className="rounded border border-blue-500 px-3 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-50 disabled:opacity-50"
+                  onClick={() => setShowReportSelectModal(true)}
+                  disabled={transactions.length === 0}
+                >
+                  日記を作成
+                </button>
+              </div>
               <CalendarView
                 events={events}
                 selectedDate={selectedDate}
@@ -439,8 +475,20 @@ export default function Home() {
         onNew={startNewEntry}
         onDelete={form.id ? () => handleDelete(form.id!) : undefined}
         onSelectTx={pickTransaction}
+        onSaveAndReport={!form.id ? handleSaveAndReport : undefined}
+        onReportExisting={form.id ? handleReportExisting : undefined}
         onClose={() => setShowModal(false)}
         formatYen={formatYen}
+      />
+      <ReportSelectEventModal
+        open={showReportSelectModal}
+        selectedDate={selectedDate}
+        events={events}
+        onSelectEvent={(eventId) => {
+          setShowReportSelectModal(false);
+          router.push(`/reports/create?tx_id=${eventId}`);
+        }}
+        onClose={() => setShowReportSelectModal(false)}
       />
     </div>
   );
