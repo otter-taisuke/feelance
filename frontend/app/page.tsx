@@ -26,6 +26,9 @@ type Granularity = "day" | "month" | "year";
 
 const HAPPY_POSITIVE_COLOR = "#2563eb";
 const HAPPY_NEGATIVE_COLOR = "#ef4444";
+const HAPPY_NEUTRAL_COLOR = "#f3f4f6"; // 薄いグレー
+const HAPPY_NEUTRAL_TEXT_COLOR = "#0f172a";
+const HAPPY_NEUTRAL_BORDER_COLOR = "#d4d4d8";
 
 type HappyStatDatum = { label: string; positive: number; negative: number };
 type HappyStats = { data: HappyStatDatum[]; total: number; label: string };
@@ -95,8 +98,9 @@ export default function Home() {
         id: t.id,
         title: `${t.happy_amount >= 0 ? "+" : ""}${t.happy_amount.toLocaleString("ja-JP")}`,
         start: t.date,
-        color: t.happy_amount < 0 ? HAPPY_NEGATIVE_COLOR : HAPPY_POSITIVE_COLOR,
-        textColor: "#fff",
+        color: t.mood_score === 0 ? HAPPY_NEUTRAL_COLOR : t.happy_amount < 0 ? HAPPY_NEGATIVE_COLOR : HAPPY_POSITIVE_COLOR,
+        textColor: t.mood_score === 0 ? HAPPY_NEUTRAL_TEXT_COLOR : "#fff",
+        borderColor: t.mood_score === 0 ? HAPPY_NEUTRAL_BORDER_COLOR : "transparent",
       })),
     [transactions],
   );
