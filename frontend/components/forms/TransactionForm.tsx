@@ -75,22 +75,22 @@ export function TransactionForm({
       <label className="block text-sm font-medium text-zinc-700">
         心の動き
         <div className="mt-2 space-y-2">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 relative">
             {moodScale.map((value, idx) => {
               const isSelected = form.mood_score === value;
               const moodConfig = [
-                { emoji: "😢", label: "最悪", color: "text-red-600", bgColor: "bg-red-50", borderColor: "border-red-300" },
-                { emoji: "😟", label: "やや悪", color: "text-orange-600", bgColor: "bg-orange-50", borderColor: "border-orange-300" },
-                { emoji: "😐", label: "普通", color: "text-gray-600", bgColor: "bg-gray-50", borderColor: "border-gray-300" },
-                { emoji: "😊", label: "やや良", color: "text-green-600", bgColor: "bg-green-50", borderColor: "border-green-300" },
-                { emoji: "😄", label: "最高", color: "text-blue-600", bgColor: "bg-blue-50", borderColor: "border-blue-300" },
+                { emoji: "😢", label: "最悪", color: "text-red-600", bgColor: "bg-red-100", borderColor: "border-red-300" },
+                { emoji: "😟", label: "やや悪", color: "text-red-500", bgColor: "bg-red-50/30", borderColor: "border-red-300" },
+                { emoji: "😐", label: "普通", color: "text-gray-600", bgColor: "bg-gray-200", borderColor: "border-gray-300" },
+                { emoji: "😊", label: "やや良", color: "text-blue-500", bgColor: "bg-blue-50/30", borderColor: "border-blue-300" },
+                { emoji: "😄", label: "最高", color: "text-blue-600", bgColor: "bg-blue-100", borderColor: "border-blue-300" },
               ];
               const config = moodConfig[idx];
               return (
                 <button
                   key={value}
                   type="button"
-                  className={`flex flex-1 flex-col items-center gap-1 rounded-lg border-2 p-2 transition-all hover:scale-105 focus:outline-none ${
+                  className={`flex flex-1 flex-col items-center gap-0.5 rounded-lg border-2 px-1 py-1.5 transition-all focus:outline-none hover:scale-105 hover:z-10 ${
                     isSelected
                       ? `${config.bgColor} ${config.borderColor} border-2 shadow-sm`
                       : "border-zinc-200 bg-white hover:border-zinc-300"
@@ -99,10 +99,10 @@ export function TransactionForm({
                   aria-pressed={isSelected}
                   aria-label={`${config.label}（${value}）`}
                 >
-                  <span className={`text-3xl ${isSelected ? config.color : "text-zinc-400"}`}>
+                  <span className={`text-2xl ${isSelected ? config.color : "text-zinc-400"}`}>
                     {config.emoji}
                   </span>
-                  <span className={`text-xs font-medium ${isSelected ? config.color : "text-zinc-500"}`}>
+                  <span className={`text-[10px] font-medium ${isSelected ? config.color : "text-zinc-500"}`}>
                     {config.label}
                   </span>
                 </button>
