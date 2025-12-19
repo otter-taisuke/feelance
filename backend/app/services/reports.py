@@ -10,6 +10,7 @@ from fastapi import HTTPException
 from openai import OpenAI
 from dotenv import load_dotenv
 
+from app.constants.mood import get_mood_label
 from app.repositories.csv_store import append_chat_log, read_reports, write_reports
 from app.schemas.reports import ChatMessage, GenerateReportResponse
 from app.services.transactions import get_transaction
@@ -24,11 +25,6 @@ SESSION_ID = "debug-session"
 RUN_ID = "run1"
 logger = logging.getLogger("uvicorn.error")
 logger.setLevel(logging.DEBUG)
-REPORT_JSON_INSTRUCTION = (
-    "ここまでの会話内容をもとに日記レポートを出力してください。"
-    '必ず {"report_title": "...", "report_body": "..."} だけをJSONで返してください。'
-    "タイトルと本文は日本語で、前置きや説明文は不要です。"
-)
 
 
 def _ensure_client() -> OpenAI:
@@ -38,14 +34,7 @@ def _ensure_client() -> OpenAI:
 
 
 def _build_system_prompt(event: dict) -> str:
-    mood_label_map = {
-        -2: "最悪",
-        -1: "やや悪",
-        0: "普通",
-        1: "やや良",
-        2: "最高",
-    }
-    mood_label = mood_label_map.get(int(event["mood_score"]), "不明")
+    mood_label = get_mood_label(event.get("mood_score"))
     return (
         "あなたはユーザーの日記作成を支援するアシスタントです。\n"
         "以下のイベント情報を踏まえ、あなたが主体となって質問を投げかけ、ユーザーから詳細を引き出してください。\n"
@@ -84,15 +73,44 @@ def _format_messages(system_prompt: str, messages: Iterable[ChatMessage]):
     return formatted
 
 
-def _build_conversation_history_text(messages: Iterable[ChatMessage]) -> str:
-    """元の会話を1本のテキストにまとめる（生成用にのみ使用、ログには含めない）。"""
+def _build_conversation_history_text(event, messages: Iterable[ChatMessage]) -> str:
+    """イベント情報 + 会話ログを1本のテキストにまとめる（生成用のみ）。"""
     lines = []
-    for idx, m in enumerate(messages, start=1):
+    # イベント情報を先頭に付ける
+    try:
+        event_date = getattr(event, "date", None) or (event.get("date") if isinstance(event, dict) else None)
+        event_item = getattr(event, "item", None) or (event.get("item") if isinstance(event, dict) else None)
+        event_amount = getattr(event, "amount", None) or (event.get("amount") if isinstance(event, dict) else None)
+        event_mood = getattr(event, "mood_score", None) or (event.get("mood_score") if isinstance(event, dict) else None)
+        event_happy = getattr(event, "happy_amount", None) or (event.get("happy_amount") if isinstance(event, dict) else None)
+    except Exception:
+        event_date = event_item = event_amount = event_mood = event_happy = None
+
+    lines.append("イベント情報:")
+    lines.append(f"- 日付: {event_date or '不明'}")
+    lines.append(f"- イベント名: {event_item or '不明'}")
+    lines.append(f"- 金額: {event_amount if event_amount is not None else '不明'}")
+    mood_label = get_mood_label(event_mood)
+    lines.append(f"- 感情: {mood_label}")
+    lines.append(f"- Happy Money: {event_happy if event_happy is not None else '不明'}")
+    lines.append("")  # 区切り
+    lines.append("会話ログ:")
+
+    has_messages = False
+    # 最後のメッセージがAIならそれを含めない
+    messages_list = list(messages)
+    if messages_list and messages_list[-1].role == "assistant":
+        messages_list = messages_list[:-1]
+    for idx, m in enumerate(messages_list, start=1):
         speaker = "ユーザー" if m.role == "user" else "アシスタント"
         lines.append(f"{idx}. {speaker}: {m.content}")
-    if not lines:
-        return "会話ログはまだありません。"
+        has_messages = True
+
+    if not has_messages:
+        lines.append("（会話ログはまだありません）")
+
     print(lines)
+
     return "\n".join(lines)
 
 
@@ -142,12 +160,8 @@ def generate_report(tx_id: str, messages: List[ChatMessage], user_id: str) -> Ge
         '\nキーは "report_title", "report_body" とし、文章は日本語で書いてください。'
         "\n前置きや説明文は不要で、純粋なJSONだけを返してください。"
     )
-    conversation_text = _build_conversation_history_text(messages)
-    user_generation_prompt = (
-        "以下はこれまでの会話ログです。内容を整理し、日記レポートを生成してください。\n"
-        f"{conversation_text}\n\n"
-        f"{REPORT_JSON_INSTRUCTION}"
-    )
+    conversation_text = _build_conversation_history_text(event, messages)
+    user_generation_prompt = f"{conversation_text}"
     generation_messages = [ChatMessage(role="user", content=user_generation_prompt)]
     formatted_messages = _format_messages(system_prompt, generation_messages)
     try:
@@ -178,23 +192,6 @@ def generate_report(tx_id: str, messages: List[ChatMessage], user_id: str) -> Ge
         {"tx_id": tx_id, "content_preview": content[:500]},
     )
     # endregion
-    # ログには元の会話のみを保存し、生成専用の追加プロンプトは含めない
-    log_messages = _format_messages(system_prompt, messages)
-    final_messages = [*log_messages, {"role": "assistant", "content": content}]
-    try:
-        append_chat_log(
-            tx_id=tx_id,
-            user_id=user_id,
-            messages_json=json.dumps(final_messages, ensure_ascii=False),
-            created_at=datetime.utcnow(),
-        )
-    except Exception:
-        _log_debug(
-            "H2",
-            "services/reports.py:generate_report",
-            "chat_log_append_failed",
-            {"tx_id": tx_id},
-        )
     return _parse_report_content(content)
 
 

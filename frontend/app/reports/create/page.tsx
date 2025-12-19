@@ -9,6 +9,7 @@ import {
   saveReport,
   streamReportChat,
 } from "@/lib/api";
+import { moodOptions, getMoodLabel } from "@/lib/mood";
 import type { ChatMessage, Transaction } from "@/lib/types";
 
 type ChatState = {
@@ -65,7 +66,8 @@ export default function CreateReportPage() {
 
   const eventSummary = useMemo(() => {
     if (!transaction) return "";
-    return `${transaction.date} / ${transaction.item} / ${transaction.amount.toLocaleString("ja-JP")}円 / mood ${transaction.mood_score}`;
+    const moodLabel = getMoodLabel(transaction.mood_score);
+    return `${transaction.date} / ${transaction.item} / ${transaction.amount.toLocaleString("ja-JP")}円 / 感情 ${moodLabel}`;
   }, [transaction]);
 
   const handleSend = async () => {
@@ -287,7 +289,7 @@ export default function CreateReportPage() {
               <div>日付: {transaction.date}</div>
               <div>イベント名: {transaction.item}</div>
               <div>金額: {transaction.amount.toLocaleString("ja-JP")} 円</div>
-              <div>感情スコア: {transaction.mood_score}</div>
+              <div>感情: {getMoodLabel(transaction.mood_score)}</div>
               <div>Happy Money: {transaction.happy_amount.toLocaleString("ja-JP")} 円</div>
             </div>
           )}

@@ -19,7 +19,7 @@ import { DayModal } from "@/components/modals/DayModal";
 import { ReportSelectEventModal } from "@/components/modals/ReportSelectEventModal";
 import { useTransactions } from "@/hooks/useTransactions";
 import { login, logout, me } from "@/lib/api";
-import { moodOptions } from "@/lib/constants";
+import { getMoodLabel, moodOptions } from "@/lib/mood";
 import type { Transaction, TransactionForm, User } from "@/lib/types";
 
 type Granularity = "day" | "month" | "year";

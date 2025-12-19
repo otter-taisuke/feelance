@@ -1,0 +1,12 @@
+{
+  "moods": [
+    { "value": -2, "label": "とてもネガティブ (-2)", "short_label": "とてもネガティブ" },
+    { "value": -1, "label": "ややネガティブ (-1)", "short_label": "ややネガティブ" },
+    { "value": 0, "label": "ニュートラル (0)", "short_label": "ニュートラル" },
+    { "value": 1, "label": "ややポジティブ (+1)", "short_label": "ややポジティブ" },
+    { "value": 2, "label": "最高", "short_label": "最高" }
+  ],
+  "default_label": "不明",
+  "default_short_label": "不明"
+}
+
