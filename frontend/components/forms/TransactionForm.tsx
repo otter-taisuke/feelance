@@ -72,25 +72,42 @@ export function TransactionForm({
 
       <label className="block text-sm font-medium text-zinc-700">
         心の動き
-        <div className="mt-2 flex items-center gap-2">
-          {moodScale.map((value, idx) => {
-            const active = idx <= activeStarIndex;
-            return (
-              <button
-                key={value}
-                type="button"
-                className={`text-2xl leading-none transition ${
-                  active ? "text-amber-500" : "text-zinc-300"
-                } hover:text-amber-400 focus:outline-none`}
-                onClick={() => onChange({ mood_score: value })}
-                aria-pressed={form.mood_score === value}
-                aria-label={`星${idx + 1}（${value}）`}
-              >
-                ★
-              </button>
-            );
-          })}
-          <span className="text-xs text-zinc-500">★1=-2 〜 ★5=+2</span>
+        <div className="mt-2 space-y-2">
+          <div className="flex items-center gap-2">
+            {moodScale.map((value, idx) => {
+              const isSelected = form.mood_score === value;
+              const moodConfig = [
+                { emoji: "😢", label: "最悪", color: "text-red-600", bgColor: "bg-red-50", borderColor: "border-red-300" },
+                { emoji: "😟", label: "やや悪", color: "text-orange-600", bgColor: "bg-orange-50", borderColor: "border-orange-300" },
+                { emoji: "😐", label: "普通", color: "text-gray-600", bgColor: "bg-gray-50", borderColor: "border-gray-300" },
+                { emoji: "😊", label: "やや良", color: "text-green-600", bgColor: "bg-green-50", borderColor: "border-green-300" },
+                { emoji: "😄", label: "最高", color: "text-blue-600", bgColor: "bg-blue-50", borderColor: "border-blue-300" },
+              ];
+              const config = moodConfig[idx];
+              return (
+                <button
+                  key={value}
+                  type="button"
+                  className={`flex flex-1 flex-col items-center gap-1 rounded-lg border-2 p-2 transition-all hover:scale-105 focus:outline-none ${
+                    isSelected
+                      ? `${config.bgColor} ${config.borderColor} border-2 shadow-sm`
+                      : "border-zinc-200 bg-white hover:border-zinc-300"
+                  }`}
+                  onClick={() => onChange({ mood_score: value })}
+                  aria-pressed={isSelected}
+                  aria-label={`${config.label}（${value}）`}
+                >
+                  <span className={`text-3xl ${isSelected ? config.color : "text-zinc-400"}`}>
+                    {config.emoji}
+                  </span>
+                  <span className={`text-xs font-medium ${isSelected ? config.color : "text-zinc-500"}`}>
+                    {config.label}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          
         </div>
       </label>
 
