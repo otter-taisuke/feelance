@@ -17,7 +17,6 @@ type Props = {
   onNew: () => void;
   onDelete?: () => void;
   onSelectTx: (tx: Transaction) => void;
-  onSaveAndReport?: () => void;
   onReportExisting?: () => void;
   onClose: () => void;
   formatYen: (v: number) => string;
@@ -36,7 +35,6 @@ export function DayModal({
   onNew,
   onDelete,
   onSelectTx,
-  onSaveAndReport,
   onReportExisting,
   onClose,
   formatYen,
@@ -86,15 +84,6 @@ export function DayModal({
                 このイベントをもとに日記レポートを作成します。
               </p>
             </div>
-            {!form.id && onSaveAndReport && (
-              <button
-                className="w-full rounded bg-black px-4 py-3 text-sm font-semibold text-white disabled:opacity-50"
-                onClick={onSaveAndReport}
-                disabled={saving}
-              >
-                追加し日記を作成
-              </button>
-            )}
             {form.id && onReportExisting && (
               <button
                 className="w-full rounded border border-blue-500 px-4 py-3 text-sm font-semibold text-blue-700 hover:bg-blue-50 disabled:opacity-50"

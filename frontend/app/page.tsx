@@ -257,22 +257,6 @@ export default function Home() {
 
   const startNewEntry = () => resetForm(selectedDate);
 
-  const handleSaveAndReport = async () => {
-    if (!user) return;
-    if (!form.item || !form.amount || !form.date) {
-      setError("日付・商品名・金額は必須です");
-      return;
-    }
-    try {
-      const saved = await upsertTransaction(user.user_id, form);
-      setShowModal(false);
-      router.push(`/reports/create?tx_id=${saved.id}`);
-      resetForm(saved.date);
-    } catch {
-      // handled in hook
-    }
-  };
-
   const handleReportExisting = () => {
     if (!form.id) return;
     setShowModal(false);
@@ -475,7 +459,6 @@ export default function Home() {
         onNew={startNewEntry}
         onDelete={form.id ? () => handleDelete(form.id!) : undefined}
         onSelectTx={pickTransaction}
-        onSaveAndReport={!form.id ? handleSaveAndReport : undefined}
         onReportExisting={form.id ? handleReportExisting : undefined}
         onClose={() => setShowModal(false)}
         formatYen={formatYen}
