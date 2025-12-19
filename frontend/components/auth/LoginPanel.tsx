@@ -18,6 +18,11 @@ export function LoginPanel({ userIdInput, onChange, onLogin, loading, error }: P
           placeholder="登録済みのユーザーIDを入力"
           value={userIdInput}
           onChange={(e) => onChange(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && userIdInput && !loading) {
+              onLogin();
+            }
+          }}
         />
         <button
           className="rounded bg-black px-4 py-2 text-white disabled:opacity-50"
