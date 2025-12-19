@@ -10,6 +10,7 @@ type CalendarEvent = {
   start: string;
   color?: string;
   textColor?: string;
+  borderColor?: string;
 };
 
 type Props = {
