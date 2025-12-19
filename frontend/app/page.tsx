@@ -28,7 +28,14 @@ const HAPPY_NEGATIVE_COLOR = "#ef4444";
 type HappyStatDatum = { label: string; positive: number; negative: number };
 type HappyStats = { data: HappyStatDatum[]; total: number; label: string };
 
-const getToday = () => new Date().toISOString().slice(0, 10);
+const formatDateLocal = (date: Date) => {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+};
+
+const getToday = () => formatDateLocal(new Date());
 
 export default function Home() {
   const [userIdInput, setUserIdInput] = useState("");
@@ -331,12 +338,18 @@ export default function Home() {
                 selectedDate={selectedDate}
                 onDateClick={openModalForDate}
                 onEventClick={handleEventClick}
+                onMonthChange={(year, month) => {
+                  const firstDayOfMonth = formatDateLocal(new Date(year, month, 1));
+                  if (selectedDate !== firstDayOfMonth) {
+                    setSelectedDate(firstDayOfMonth);
+                  }
+                }}
               />
             </div>
 
             <div className="rounded-lg bg-white p-4 shadow-sm">
               <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold">Happy Money 統計</h2>
+                <h2 className="text-lg font-semibold">心の動き</h2>
                 {happyStats.label && (
                   <div className="flex items-center gap-2">
                     <p className="text-sm text-zinc-500">{happyStats.label}</p>
