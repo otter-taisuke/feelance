@@ -10,7 +10,7 @@ DATA_DIR = ROOT_DIR / "data"
 # CORS設定（Cookie送信を許可するため、明示的なオリジンを指定推奨）
 ALLOW_ORIGINS: List[str] = os.getenv(
     "ALLOW_ORIGINS",
-    "http://localhost:3000,http://127.0.0.1:3000",
+    "http://localhost:3000,http://172.31.3.40:3000",
 ).split(",")
 
 # セッションCookie設定
