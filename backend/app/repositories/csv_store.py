@@ -1,4 +1,5 @@
 from pathlib import Path
+from datetime import datetime
 
 import pandas as pd
 
@@ -7,6 +8,7 @@ from app.core.config import DATA_DIR
 USERS_FILE = DATA_DIR / "users.csv"
 TX_FILE = DATA_DIR / "transactions.csv"
 REPORTS_FILE = DATA_DIR / "reports.csv"
+CHAT_FILE = DATA_DIR / "chat.csv"
 
 
 def ensure_data_files() -> None:
@@ -21,6 +23,11 @@ def ensure_data_files() -> None:
     if not REPORTS_FILE.exists():
         REPORTS_FILE.write_text(
             "event_name,report_title,report_body,created_at,user_id\n",
+            encoding="utf-8",
+        )
+    if not CHAT_FILE.exists():
+        CHAT_FILE.write_text(
+            "tx_id,user_id,messages_json,created_at\n",
             encoding="utf-8",
         )
 
@@ -65,4 +72,27 @@ def read_reports() -> pd.DataFrame:
 
 def write_reports(df: pd.DataFrame) -> None:
     df.to_csv(REPORTS_FILE, index=False, date_format="%Y-%m-%dT%H:%M:%S")
+
+
+def append_chat_log(tx_id: str, user_id: str, messages_json: str, created_at: datetime) -> None:
+    ensure_data_files()
+    try:
+        df = pd.read_csv(
+            CHAT_FILE,
+            dtype={"tx_id": str, "user_id": str, "messages_json": str},
+            parse_dates=["created_at"],
+        )
+    except Exception:
+        df = pd.DataFrame(columns=["tx_id", "user_id", "messages_json", "created_at"])
+
+    # tx_id & user_id 単位で最新を上書き
+    df = df[(df["tx_id"] != tx_id) | (df["user_id"] != user_id)]
+    new_row = {
+        "tx_id": tx_id,
+        "user_id": user_id,
+        "messages_json": messages_json,
+        "created_at": created_at,
+    }
+    df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
+    df.to_csv(CHAT_FILE, index=False, date_format="%Y-%m-%dT%H:%M:%S")
 

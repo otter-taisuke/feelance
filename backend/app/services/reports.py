@@ -1,15 +1,16 @@
 import os
-from datetime import datetime
-from typing import Generator, Iterable, List
 import json
 import textwrap
+import logging
+from datetime import datetime
+from typing import Generator, Iterable, List
 
 import pandas as pd
 from fastapi import HTTPException
 from openai import OpenAI
 from dotenv import load_dotenv
 
-from app.repositories.csv_store import read_reports, write_reports
+from app.repositories.csv_store import append_chat_log, read_reports, write_reports
 from app.schemas.reports import ChatMessage, GenerateReportResponse
 from app.services.transactions import get_transaction
 
@@ -19,6 +20,10 @@ MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 client = OpenAI(api_key=OPENAI_API_KEY) if OPENAI_API_KEY else None
+SESSION_ID = "debug-session"
+RUN_ID = "run1"
+logger = logging.getLogger("uvicorn.error")
+logger.setLevel(logging.DEBUG)
 
 
 def _ensure_client() -> OpenAI:
@@ -49,6 +54,24 @@ def _build_system_prompt(event: dict) -> str:
     )
 
 
+def _log_debug(hypothesis_id: str, location: str, message: str, data: dict) -> None:
+    payload = {
+        "sessionId": SESSION_ID,
+        "runId": RUN_ID,
+        "hypothesisId": hypothesis_id,
+        "location": location,
+        "message": message,
+        "data": data,
+        "timestamp": int(datetime.utcnow().timestamp() * 1000),
+    }
+    try:
+        line = json.dumps(payload, ensure_ascii=False)
+        logger.debug(line)
+    except Exception:
+        # ログ失敗は処理を妨げない
+        pass
+
+
 def _format_messages(system_prompt: str, messages: Iterable[ChatMessage]):
     formatted = [{"role": "system", "content": system_prompt}]
     for m in messages:
@@ -60,6 +83,7 @@ def stream_chat(tx_id: str, messages: List[ChatMessage], user_id: str) -> Genera
     event = get_transaction(tx_id)
     system_prompt = _build_system_prompt(event.model_dump())
     formatted_messages = _format_messages(system_prompt, messages)
+    assistant_chunks: List[str] = []
     try:
         stream = _ensure_client().chat.completions.create(
             model=MODEL,
@@ -69,11 +93,29 @@ def stream_chat(tx_id: str, messages: List[ChatMessage], user_id: str) -> Genera
         for chunk in stream:
             delta = chunk.choices[0].delta.content
             if delta:
+                assistant_chunks.append(delta)
                 yield delta
     except HTTPException:
         raise
     except Exception as exc:  # pragma: no cover - OpenAIエラーは上位で処理
         raise HTTPException(status_code=500, detail=str(exc)) from exc
+    assistant_content = "".join(assistant_chunks)
+    # 生成されたアシスタント発話も含めて保存する
+    final_messages = [*formatted_messages, {"role": "assistant", "content": assistant_content}]
+    try:
+        append_chat_log(
+            tx_id=tx_id,
+            user_id=user_id,
+            messages_json=json.dumps(final_messages, ensure_ascii=False),
+            created_at=datetime.utcnow(),
+        )
+    except Exception:
+        _log_debug(
+            "H2",
+            "services/reports.py:stream_chat",
+            "chat_log_append_failed",
+            {"tx_id": tx_id},
+        )
 
 
 def generate_report(tx_id: str, messages: List[ChatMessage], user_id: str) -> GenerateReportResponse:
@@ -85,6 +127,14 @@ def generate_report(tx_id: str, messages: List[ChatMessage], user_id: str) -> Ge
     )
     formatted_messages = _format_messages(system_prompt, messages)
     try:
+        # region agent log
+        _log_debug(
+            "H1",
+            "services/reports.py:generate_report:before_call",
+            "call_openai_generate",
+            {"tx_id": tx_id, "messages_count": len(formatted_messages), "model": MODEL},
+        )
+        # endregion
         res = _ensure_client().chat.completions.create(
             model=MODEL,
             messages=formatted_messages,
@@ -96,6 +146,29 @@ def generate_report(tx_id: str, messages: List[ChatMessage], user_id: str) -> Ge
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
     content = res.choices[0].message.content or ""
+    # region agent log
+    _log_debug(
+        "H1",
+        "services/reports.py:generate_report:after_call",
+        "openai_response_content",
+        {"tx_id": tx_id, "content_preview": content[:500]},
+    )
+    # endregion
+    final_messages = [*formatted_messages, {"role": "assistant", "content": content}]
+    try:
+        append_chat_log(
+            tx_id=tx_id,
+            user_id=user_id,
+            messages_json=json.dumps(final_messages, ensure_ascii=False),
+            created_at=datetime.utcnow(),
+        )
+    except Exception:
+        _log_debug(
+            "H2",
+            "services/reports.py:generate_report",
+            "chat_log_append_failed",
+            {"tx_id": tx_id},
+        )
     return _parse_report_content(content)
 
 
@@ -124,6 +197,14 @@ def _parse_report_content(content: str) -> GenerateReportResponse:
         data = json.loads(content)
         return GenerateReportResponse.model_validate(data)
     except Exception:
+        # region agent log
+        _log_debug(
+            "H1",
+            "services/reports.py:_parse_report_content",
+            "parse_failed",
+            {"content_preview": content[:500]},
+        )
+        # endregion
         pass
 
     snippet = textwrap.shorten(content.replace("\n", " "), width=200, placeholder="...")
