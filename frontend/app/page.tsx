@@ -326,17 +326,12 @@ export default function Home() {
             </div>
 
             <div className="rounded-lg bg-white p-4 shadow-sm">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold">カレンダー</h2>
-              </div>
-              <div className="mt-4">
-                <CalendarView
-                  events={events}
-                  selectedDate={selectedDate}
-                  onDateClick={openModalForDate}
-                  onEventClick={handleEventClick}
-                />
-              </div>
+              <CalendarView
+                events={events}
+                selectedDate={selectedDate}
+                onDateClick={openModalForDate}
+                onEventClick={handleEventClick}
+              />
             </div>
 
             <div className="rounded-lg bg-white p-4 shadow-sm">
@@ -345,7 +340,7 @@ export default function Home() {
                 {happyStats.label && (
                   <div className="flex items-center gap-2">
                     <p className="text-sm text-zinc-500">{happyStats.label}</p>
-                    <span className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-sm font-semibold text-blue-800 shadow-sm">
+                    <span className="rounded-full border-2 border-blue-300 bg-blue-50 px-5 py-2 text-2xl font-bold text-blue-900 shadow-md">
                       合計 {formatYen(happyStats.total)} Happy Money
                     </span>
                   </div>
@@ -373,7 +368,20 @@ export default function Home() {
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={happyStats.data} stackOffset="sign">
                       <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="label" />
+                      <XAxis
+                        dataKey="label"
+                        tickFormatter={(label) => {
+                          if (granularity === "day") {
+                            // YYYY-MM-DD形式をYYYY/MM/DD形式に変換
+                            return label.replace(/-/g, "/");
+                          }
+                          if (granularity === "month") {
+                            // YYYY-MM形式をYYYY/MM形式に変換
+                            return label.replace(/-/g, "/");
+                          }
+                          return label;
+                        }}
+                      />
                       <YAxis
                         domain={[
                           (dataMin: number) => Math.min(0, dataMin),
