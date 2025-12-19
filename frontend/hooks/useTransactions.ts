@@ -59,6 +59,11 @@ export function useTransactions() {
     }
   }, []);
 
+  const resetTransactions = useCallback(() => {
+    setTransactions([]);
+    setError(null);
+  }, []);
+
   return {
     transactions,
     loading,
@@ -68,6 +73,7 @@ export function useTransactions() {
     loadTransactions,
     upsertTransaction,
     removeTransaction,
+    resetTransactions,
   };
 }
 

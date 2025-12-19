@@ -1,22 +1,42 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  ReferenceLine,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 
 import { LoginPanel } from "@/components/auth/LoginPanel";
 import { CalendarView } from "@/components/calendar/CalendarView";
 import { DayModal } from "@/components/modals/DayModal";
 import { useTransactions } from "@/hooks/useTransactions";
-import { login } from "@/lib/api";
+import { login, logout, me } from "@/lib/api";
 import { moodOptions } from "@/lib/constants";
 import type { Transaction, TransactionForm, User } from "@/lib/types";
+
+type Granularity = "day" | "month" | "year";
+
+const HAPPY_POSITIVE_COLOR = "#2563eb";
+const HAPPY_NEGATIVE_COLOR = "#ef4444";
+
+type HappyStatDatum = { label: string; positive: number; negative: number };
+type HappyStats = { data: HappyStatDatum[]; total: number; label: string };
+
+const getToday = () => new Date().toISOString().slice(0, 10);
 
 export default function Home() {
   const [userIdInput, setUserIdInput] = useState("");
   const [user, setUser] = useState<User | null>(null);
-  const [selectedDate, setSelectedDate] = useState<string>("");
+  const [selectedDate, setSelectedDate] = useState<string>(() => getToday());
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState<TransactionForm>({
-    date: "",
+    date: getToday(),
     item: "",
     amount: "",
     mood_score: 0,
@@ -32,13 +52,26 @@ export default function Home() {
     loadTransactions,
     upsertTransaction,
     removeTransaction,
+    resetTransactions,
   } = useTransactions();
+  const [granularity, setGranularity] = useState<Granularity>("day");
 
   useEffect(() => {
-    const today = new Date().toISOString().slice(0, 10);
-    setSelectedDate(today);
-    setForm((f) => ({ ...f, date: today }));
-  }, []);
+    const restoreLogin = async () => {
+      setAuthLoading(true);
+      try {
+        const res = await me();
+        setUser(res);
+        await loadTransactions(res.user_id);
+      } catch {
+        // 未ログインの場合は無視
+        setUser(null);
+      } finally {
+        setAuthLoading(false);
+      }
+    };
+    restoreLogin();
+  }, [loadTransactions]);
 
   const dayTransactions = useMemo(
     () => transactions.filter((t) => t.date === selectedDate),
@@ -49,11 +82,103 @@ export default function Home() {
     () =>
       transactions.map((t) => ({
         id: t.id,
-        title: `${t.item} ¥${t.amount} (happy ¥${t.happy_amount})`,
+        title: `${t.happy_amount >= 0 ? "+" : ""}${t.happy_amount.toLocaleString("ja-JP")}`,
         start: t.date,
+        color: t.happy_amount < 0 ? HAPPY_NEGATIVE_COLOR : HAPPY_POSITIVE_COLOR,
+        textColor: "#fff",
       })),
     [transactions],
   );
+
+  const selectedMonth = useMemo(() => {
+    if (!selectedDate) return null;
+    const base = new Date(`${selectedDate}T00:00:00`);
+    return {
+      year: base.getFullYear(),
+      month: base.getMonth(),
+      label: base.toLocaleDateString("ja-JP", { year: "numeric", month: "long" }),
+    };
+  }, [selectedDate]);
+
+  const happyStats: HappyStats = useMemo(() => {
+    if (!transactions.length) {
+      return { data: [] as HappyStatDatum[], total: 0, label: "" };
+    }
+
+    if (granularity === "day") {
+      if (!selectedMonth) return { data: [], total: 0, label: "" };
+      const grouped = new Map<string, { positive: number; negative: number }>();
+      transactions.forEach((t) => {
+        const d = new Date(`${t.date}T00:00:00`);
+        if (d.getFullYear() === selectedMonth.year && d.getMonth() === selectedMonth.month) {
+          const current = grouped.get(t.date) ?? { positive: 0, negative: 0 };
+          if (t.happy_amount >= 0) {
+            current.positive += t.happy_amount;
+          } else {
+            current.negative += t.happy_amount;
+          }
+          grouped.set(t.date, current);
+        }
+      });
+      const data = Array.from(grouped.entries())
+        .map(([date, happy]) => ({
+          label: date,
+          positive: happy.positive,
+          negative: happy.negative,
+        }))
+        .sort((a, b) => a.label.localeCompare(b.label));
+      const total = data.reduce((sum, entry) => sum + entry.positive + entry.negative, 0);
+      return { data, total, label: `${selectedMonth.label}（日別）` };
+    }
+
+    if (granularity === "month") {
+      const baseYear = selectedMonth?.year ?? new Date().getFullYear();
+      const grouped = new Map<number, { positive: number; negative: number }>();
+      transactions.forEach((t) => {
+        const d = new Date(`${t.date}T00:00:00`);
+        if (d.getFullYear() === baseYear) {
+          const current = grouped.get(d.getMonth()) ?? { positive: 0, negative: 0 };
+          if (t.happy_amount >= 0) {
+            current.positive += t.happy_amount;
+          } else {
+            current.negative += t.happy_amount;
+          }
+          grouped.set(d.getMonth(), current);
+        }
+      });
+      const data = Array.from(grouped.entries())
+        .map(([month, happy]) => ({
+          label: `${baseYear}-${String(month + 1).padStart(2, "0")}`,
+          positive: happy.positive,
+          negative: happy.negative,
+        }))
+        .sort((a, b) => a.label.localeCompare(b.label));
+      const total = data.reduce((sum, entry) => sum + entry.positive + entry.negative, 0);
+      return { data, total, label: `${baseYear}年（月別）` };
+    }
+
+    // year
+    const grouped = new Map<number, { positive: number; negative: number }>();
+    transactions.forEach((t) => {
+      const d = new Date(`${t.date}T00:00:00`);
+      const current = grouped.get(d.getFullYear()) ?? { positive: 0, negative: 0 };
+      if (t.happy_amount >= 0) {
+        current.positive += t.happy_amount;
+      } else {
+        current.negative += t.happy_amount;
+      }
+      grouped.set(d.getFullYear(), current);
+    });
+    const data = Array.from(grouped.entries())
+      .map(([year, happy]) => ({
+        label: String(year),
+        positive: happy.positive,
+        negative: happy.negative,
+      }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+    const total = data.reduce((sum, entry) => sum + entry.positive + entry.negative, 0);
+    return { data, total, label: "全期間（年別）" };
+  }, [granularity, selectedMonth, transactions]);
 
   const resetForm = (dateStr: string) => {
     setForm({
@@ -72,6 +197,23 @@ export default function Home() {
       const res = await login(userIdInput.trim());
       setUser(res);
       await loadTransactions(res.user_id);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    setError(null);
+    setAuthLoading(true);
+    try {
+      await logout();
+      setUser(null);
+      setUserIdInput("");
+      resetTransactions();
+      setShowModal(false);
+      setForm((prev) => ({ ...prev, id: undefined }));
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -169,27 +311,107 @@ export default function Home() {
                   {user.display_name || user.user_id}
                 </p>
               </div>
-              <div className="text-sm text-zinc-500">
-                取引: {loading ? "取得中..." : `${transactions.length}件`}
+              <div className="flex items-center gap-3">
+                <div className="text-sm text-zinc-500">
+                  取引: {loading ? "取得中..." : `${transactions.length}件`}
+                </div>
+                <button
+                  className="rounded border border-zinc-300 px-3 py-1 text-sm text-zinc-700 hover:border-zinc-500 disabled:opacity-50"
+                  onClick={handleLogout}
+                  disabled={authLoading}
+                >
+                  ログアウト
+                </button>
               </div>
             </div>
 
             <div className="rounded-lg bg-white p-4 shadow-sm">
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-semibold">カレンダー</h2>
-                <button
-                  className="rounded bg-zinc-900 px-3 py-2 text-sm text-white"
-                  onClick={() => openModalForDate(selectedDate)}
-                >
-                  選択日のイベントを追加
-                </button>
               </div>
               <div className="mt-4">
                 <CalendarView
                   events={events}
+                  selectedDate={selectedDate}
                   onDateClick={openModalForDate}
                   onEventClick={handleEventClick}
                 />
+              </div>
+            </div>
+
+            <div className="rounded-lg bg-white p-4 shadow-sm">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold">Happy Money 統計</h2>
+                {happyStats.label && (
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm text-zinc-500">{happyStats.label}</p>
+                    <span className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-sm font-semibold text-blue-800 shadow-sm">
+                      合計 {formatYen(happyStats.total)} Happy Money
+                    </span>
+                  </div>
+                )}
+              </div>
+              <div className="mt-2 flex gap-2">
+                {(["day", "month", "year"] as Granularity[]).map((g) => (
+                  <button
+                    key={g}
+                    className={`rounded border px-3 py-1 text-sm ${
+                      granularity === g
+                        ? "border-black bg-black text-white"
+                        : "border-zinc-300 text-zinc-700 hover:border-zinc-500"
+                    }`}
+                    onClick={() => setGranularity(g)}
+                  >
+                    {g === "day" ? "日別" : g === "month" ? "月別" : "年別"}
+                  </button>
+                ))}
+              </div>
+              <div className="mt-4 h-64">
+                {happyStats.data.length === 0 ? (
+                  <p className="text-sm text-zinc-500">データがありません</p>
+                ) : (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={happyStats.data} stackOffset="sign">
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="label" />
+                      <YAxis
+                        domain={[
+                          (dataMin: number) => Math.min(0, dataMin),
+                          (dataMax: number) => Math.max(0, dataMax),
+                        ]}
+                      />
+                      <Tooltip
+                        formatter={(value) => formatYen(Number(value))}
+                        labelFormatter={(label) => {
+                          if (granularity === "day") {
+                            return new Date(`${label}T00:00:00`).toLocaleDateString(
+                              "ja-JP",
+                              { month: "numeric", day: "numeric" },
+                            );
+                          }
+                          if (granularity === "month") {
+                            const [y, m] = String(label).split("-");
+                            return `${Number(y)}年${Number(m)}月`;
+                          }
+                          return `${label}年`;
+                        }}
+                      />
+                      <ReferenceLine y={0} stroke="#0f172a" />
+                      <Bar
+                        dataKey="positive"
+                        stackId="happy"
+                        fill={HAPPY_POSITIVE_COLOR}
+                        name="プラス"
+                      />
+                      <Bar
+                        dataKey="negative"
+                        stackId="happy"
+                        fill={HAPPY_NEGATIVE_COLOR}
+                        name="マイナス"
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
               </div>
             </div>
           </>

@@ -9,4 +9,5 @@ dependencies = [
     "pandas>=2.3.3",
     "python-dotenv>=1.2.1",
     "uvicorn[standard]>=0.38.0",
+    "itsdangerous>=2.2.0",
 ]

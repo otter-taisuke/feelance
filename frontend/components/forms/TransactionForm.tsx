@@ -23,8 +23,21 @@ export function TransactionForm({
   saving,
   error,
 }: Props) {
+  const moodScale = [-2, -1, 0, 1, 2];
+  const activeStarIndex = (() => {
+    const idx = moodScale.indexOf(form.mood_score);
+    return idx >= 0 ? idx : 2;
+  })();
+
   return (
     <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <span className="text-sm font-semibold text-zinc-800">
+          {form.id ? "編集中" : "新規入力"}
+        </span>
+        {form.id && <span className="rounded bg-blue-50 px-2 py-1 text-xs text-blue-700">ID: {form.id}</span>}
+      </div>
+
       <label className="block text-sm font-medium text-zinc-700">
         日付
         <input
@@ -49,6 +62,7 @@ export function TransactionForm({
         金額 (円)
         <input
           type="number"
+          inputMode="decimal"
           className="mt-1 w-full rounded border border-zinc-300 p-2"
           value={form.amount}
           onChange={(e) => onChange({ amount: e.target.value })}
@@ -58,17 +72,26 @@ export function TransactionForm({
 
       <label className="block text-sm font-medium text-zinc-700">
         心の動き
-        <select
-          className="mt-1 w-full rounded border border-zinc-300 p-2"
-          value={form.mood_score}
-          onChange={(e) => onChange({ mood_score: Number(e.target.value) })}
-        >
-          {moodOptions.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
+        <div className="mt-2 flex items-center gap-2">
+          {moodScale.map((value, idx) => {
+            const active = idx <= activeStarIndex;
+            return (
+              <button
+                key={value}
+                type="button"
+                className={`text-2xl leading-none transition ${
+                  active ? "text-amber-500" : "text-zinc-300"
+                } hover:text-amber-400 focus:outline-none`}
+                onClick={() => onChange({ mood_score: value })}
+                aria-pressed={form.mood_score === value}
+                aria-label={`星${idx + 1}（${value}）`}
+              >
+                ★
+              </button>
+            );
+          })}
+          <span className="text-xs text-zinc-500">★1=-2 〜 ★5=+2</span>
+        </div>
       </label>
 
       <div className="flex items-center gap-2">

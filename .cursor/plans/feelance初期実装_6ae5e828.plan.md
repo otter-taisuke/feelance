@@ -35,6 +35,3 @@ todos:
 
 - バックエンド: `backend/` 内にFastAPIエンドポイント追加（記録CRUD, Happy計算ロジック, CSV永続化）
 - データ: `data/transactions.csv`, `data/users.csv` を読書き
-- フロント: `frontend/` Next.jsで入力フォーム・カレンダー表示を実装（shadcn/ui, FullCalendar）
-
-## 実装ステップ

@@ -9,17 +9,24 @@ import dynamic from "next/dynamic";
 // ビルド時の解決エラーを避ける目的でCSS importを外しています。
 // 必要に応じて独自スタイルを `globals.css` 等で補ってください。
 
-type CalendarEvent = { id: string; title: string; start: string };
+type CalendarEvent = {
+  id: string;
+  title: string;
+  start: string;
+  color?: string;
+  textColor?: string;
+};
 
 const FullCalendar = dynamic(() => import("@fullcalendar/react"), { ssr: false });
 
 type Props = {
   events: CalendarEvent[];
+  selectedDate: string;
   onDateClick: (dateStr: string) => void;
   onEventClick: (eventId: string) => void;
 };
 
-export function CalendarView({ events, onDateClick, onEventClick }: Props) {
+export function CalendarView({ events, selectedDate, onDateClick, onEventClick }: Props) {
   const handleEventClick = (info: EventClickArg) => {
     onEventClick(info.event.id);
   };
@@ -30,9 +37,11 @@ export function CalendarView({ events, onDateClick, onEventClick }: Props) {
       initialView="dayGridMonth"
       height="auto"
       events={events}
+      initialDate={selectedDate}
       dateClick={(info) => onDateClick(info.dateStr)}
       eventClick={handleEventClick}
       locale="ja"
+      dayCellClassNames={(arg) => (arg.dateStr === selectedDate ? "fc-day-selected" : "")}
     />
   );
 }
