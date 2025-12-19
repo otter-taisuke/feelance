@@ -45,6 +45,36 @@ body {
   font-weight: 600;
 }
 
+/* FullCalendar 日曜日ホバー時の強調（赤色） */
+.fc-day-sun.fc-daygrid-day:hover {
+  background-color: #fee2e2;
+}
+.fc-day-sun.fc-daygrid-day:hover .fc-daygrid-day-number {
+  color: #dc2626;
+  font-weight: 600;
+}
+
+/* FullCalendar 土曜日ホバー時の強調（青色） */
+.fc-day-sat.fc-daygrid-day:hover {
+  background-color: #dbeafe;
+}
+.fc-day-sat.fc-daygrid-day:hover .fc-daygrid-day-number {
+  color: #2563eb;
+  font-weight: 600;
+}
+
+/* FullCalendar 日曜日を赤色に */
+.fc-day-sun .fc-daygrid-day-number,
+.fc-col-header-cell.fc-day-sun {
+  color: #dc2626;
+}
+
+/* FullCalendar 土曜日を青色に */
+.fc-day-sat .fc-daygrid-day-number,
+.fc-col-header-cell.fc-day-sat {
+  color: #2563eb;
+}
+
 /* 数値入力のステッパー非表示 */
 input[type="number"]::-webkit-outer-spin-button,
 input[type="number"]::-webkit-inner-spin-button {
