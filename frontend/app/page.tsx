@@ -49,6 +49,10 @@ export default function Home() {
   const [selectedDate, setSelectedDate] = useState<string>(() => getToday());
   const [showModal, setShowModal] = useState(false);
   const [showReportSelectModal, setShowReportSelectModal] = useState(false);
+  const [statsYear, setStatsYear] = useState<number | null>(null); // 月別グラフ用
+  const [statsPickerOpen, setStatsPickerOpen] = useState(false); // 日別グラフの年月ピッカー
+  const [statsDraftYear, setStatsDraftYear] = useState<number | null>(null);
+  const [statsDraftMonth, setStatsDraftMonth] = useState<number | null>(null);
   const [form, setForm] = useState<TransactionForm>({
     date: getToday(),
     item: "",
@@ -143,11 +147,11 @@ export default function Home() {
         }))
         .sort((a, b) => a.label.localeCompare(b.label));
       const total = data.reduce((sum, entry) => sum + entry.positive + entry.negative, 0);
-      return { data, total, label: `${selectedMonth.label}（日別）` };
+      return { data, total, label: `${selectedMonth.label}` };
     }
 
     if (granularity === "month") {
-      const baseYear = selectedMonth?.year ?? new Date().getFullYear();
+      const baseYear = statsYear ?? selectedMonth?.year ?? new Date().getFullYear();
       const grouped = new Map<number, { positive: number; negative: number }>();
       transactions.forEach((t) => {
         const d = new Date(`${t.date}T00:00:00`);
@@ -169,7 +173,7 @@ export default function Home() {
         }))
         .sort((a, b) => a.label.localeCompare(b.label));
       const total = data.reduce((sum, entry) => sum + entry.positive + entry.negative, 0);
-      return { data, total, label: `${baseYear}年（月別）` };
+      return { data, total, label: `${baseYear}年` };
     }
 
     // year
@@ -192,8 +196,75 @@ export default function Home() {
       }))
       .sort((a, b) => a.label.localeCompare(b.label));
     const total = data.reduce((sum, entry) => sum + entry.positive + entry.negative, 0);
-    return { data, total, label: "全期間（年別）" };
-  }, [granularity, selectedMonth, transactions]);
+    return { data, total, label: "全期間" };
+  }, [granularity, selectedMonth, transactions, statsYear]);
+
+  useEffect(() => {
+    if (granularity === "month") {
+      if (statsYear === null) {
+        setStatsYear(selectedMonth?.year ?? new Date().getFullYear());
+      }
+    } else if (granularity !== "day") {
+      setStatsPickerOpen(false);
+    }
+  }, [granularity, selectedMonth, statsYear]);
+
+  const statsYearDisplay = statsYear ?? selectedMonth?.year ?? new Date().getFullYear();
+
+  const changeStatsYear = (delta: number) => {
+    setStatsYear((prev) => (prev ?? statsYearDisplay) + delta);
+  };
+
+  const moveStatsMonth = (delta: number) => {
+    const base = selectedMonth
+      ? new Date(selectedMonth.year, selectedMonth.month, 1)
+      : new Date();
+    const target = new Date(base.getFullYear(), base.getMonth() + delta, 1);
+    setSelectedDate(formatDateLocal(target));
+  };
+
+  const openStatsPicker = () => {
+    const base = selectedMonth
+      ? { year: selectedMonth.year, month: selectedMonth.month + 1 }
+      : { year: new Date().getFullYear(), month: new Date().getMonth() + 1 };
+    setStatsDraftYear(base.year);
+    setStatsDraftMonth(base.month);
+    setStatsPickerOpen(true);
+  };
+
+  const applyStatsPicker = () => {
+    if (statsDraftYear && statsDraftMonth) {
+      const target = new Date(statsDraftYear, statsDraftMonth - 1, 1);
+      setSelectedDate(formatDateLocal(target));
+    }
+    setStatsPickerOpen(false);
+  };
+
+  const cancelStatsPicker = () => setStatsPickerOpen(false);
+
+  const totalBadgeClass = useMemo(() => {
+    if (happyStats.total > 0) return "border-blue-300 bg-blue-50 text-blue-900";
+    if (happyStats.total < 0) return "border-red-300 bg-red-50 text-red-900";
+    return "border-zinc-300 bg-zinc-100 text-zinc-700";
+  }, [happyStats.total]);
+
+  const handleChangeGranularity = (g: Granularity) => {
+    setGranularity(g);
+    if (g === "month") {
+      setStatsYear((prev) => prev ?? selectedMonth?.year ?? new Date().getFullYear());
+      setStatsPickerOpen(false);
+    } else if (g === "day") {
+      setStatsPickerOpen(false);
+    } else {
+      // year
+      setStatsPickerOpen(false);
+    }
+  };
+
+  const formatYenSigned = (v: number) => {
+    const sign = v > 0 ? "+" : v < 0 ? "-" : "";
+    return `￥${sign}${Math.abs(v).toLocaleString("ja-JP")}`;
+  };
 
   const resetForm = (dateStr: string) => {
     setForm({
@@ -249,8 +320,15 @@ export default function Home() {
       return;
     }
     try {
-      await upsertTransaction(user.user_id, form);
-      resetForm(form.date);
+      const saved = await upsertTransaction(user.user_id, form);
+      // 保存されたトランザクションのIDを設定して編集モードに遷移
+      setForm({
+        id: saved.id,
+        date: saved.date,
+        item: saved.item,
+        amount: String(saved.amount),
+        mood_score: saved.mood_score,
+      });
     } catch {
       // error state is set in hook
     }
@@ -372,18 +450,107 @@ export default function Home() {
             </div>
 
             <div className="rounded-lg bg-white p-4 shadow-sm">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold">心の動き</h2>
-                {happyStats.label && (
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm text-zinc-500">{happyStats.label}</p>
-                    <span className="rounded-full border-2 border-blue-300 bg-blue-50 px-5 py-2 text-2xl font-bold text-blue-900 shadow-md">
-                      合計 {formatYen(happyStats.total)} Happy Money
-                    </span>
-                  </div>
-                )}
+              <div className="relative flex items-center justify-center">
+                <h2 className="absolute left-0 text-lg font-semibold">心の動き</h2>
+                <div className="relative flex items-center justify-center gap-2">
+                  {granularity === "day" && (
+                    <>
+                      <button
+                        className="rounded border border-zinc-300 px-2 py-1 text-sm text-zinc-700 hover:border-zinc-500"
+                        onClick={() => moveStatsMonth(-1)}
+                      >
+                        ←
+                      </button>
+                      <button
+                        type="button"
+                        onClick={openStatsPicker}
+                        className="text-sm font-semibold text-zinc-800"
+                      >
+                        {happyStats.label || selectedMonth?.label || ""}
+                      </button>
+                      <button
+                        className="rounded border border-zinc-300 px-2 py-1 text-sm text-zinc-700 hover:border-zinc-500"
+                        onClick={() => moveStatsMonth(1)}
+                      >
+                        →
+                      </button>
+                      {statsPickerOpen && (
+                        <div className="absolute left-1/2 z-20 mt-10 w-64 -translate-x-1/2 rounded-lg border border-zinc-200 bg-white p-3 shadow-lg">
+                          <div className="mb-2 text-sm font-semibold text-zinc-800">年と月を選択</div>
+                          <div className="mb-3 grid grid-cols-2 gap-2 text-sm text-zinc-700">
+                            <label className="flex items-center gap-1">
+                              年
+                              <select
+                                value={statsDraftYear ?? ""}
+                                onChange={(e) => setStatsDraftYear(Number(e.target.value))}
+                                className="w-full rounded border border-zinc-300 bg-white px-2 py-1"
+                              >
+                                {Array.from({ length: 21 }, (_, i) => statsYearDisplay - 10 + i).map((y) => (
+                                  <option key={y} value={y}>
+                                    {y}
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+                            <label className="flex items-center gap-1">
+                              月
+                              <select
+                                value={statsDraftMonth ?? ""}
+                                onChange={(e) => setStatsDraftMonth(Number(e.target.value))}
+                                className="w-full rounded border border-zinc-300 bg-white px-2 py-1"
+                              >
+                                {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                                  <option key={m} value={m}>
+                                    {m}
+                                  </option>
+                                ))}
+                              </select>
+                            </label>
+                          </div>
+                          <div className="flex justify-end gap-2 text-sm">
+                            <button
+                              onClick={cancelStatsPicker}
+                              className="rounded border border-zinc-300 px-3 py-1 text-zinc-700 hover:border-zinc-500"
+                            >
+                              キャンセル
+                            </button>
+                            <button
+                              onClick={applyStatsPicker}
+                              className="rounded bg-black px-3 py-1 text-white hover:bg-zinc-800"
+                            >
+                              決定
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
+                  {granularity === "month" && (
+                    <div className="flex items-center gap-2">
+                      <button
+                        className="rounded border border-zinc-300 px-2 py-1 text-sm text-zinc-700 hover:border-zinc-500"
+                        onClick={() => changeStatsYear(-1)}
+                      >
+                        ←
+                      </button>
+                      <span className="text-sm font-semibold text-zinc-800">
+                        {statsYearDisplay}年
+                      </span>
+                      <button
+                        className="rounded border border-zinc-300 px-2 py-1 text-sm text-zinc-700 hover:border-zinc-500"
+                        onClick={() => changeStatsYear(1)}
+                      >
+                        →
+                      </button>
+                    </div>
+                  )}
+                  {granularity === "year" && (
+                    <span className="text-sm font-semibold text-zinc-800">全期間</span>
+                  )}
+                </div>
               </div>
-              <div className="mt-2 flex gap-2">
+
+              <div className="mt-3 flex justify-center">
                 {(["day", "month", "year"] as Granularity[]).map((g) => (
                   <button
                     key={g}
@@ -392,12 +559,30 @@ export default function Home() {
                         ? "border-black bg-black text-white"
                         : "border-zinc-300 text-zinc-700 hover:border-zinc-500"
                     }`}
-                    onClick={() => setGranularity(g)}
+                    onClick={() => handleChangeGranularity(g)}
                   >
                     {g === "day" ? "日別" : g === "month" ? "月別" : "年別"}
                   </button>
                 ))}
               </div>
+
+              <div className="mt-3 border-y border-zinc-200 py-2">
+                <div className="flex items-end justify-end text-right">
+                  <span className="text-sm font-semibold leading-none text-zinc-800">合計 Happy Money</span>
+                  <span
+                    className={`ml-3 text-xl font-semibold leading-none ${
+                      happyStats.total > 0
+                        ? "text-blue-800"
+                        : happyStats.total < 0
+                          ? "text-red-700"
+                          : "text-zinc-700"
+                    }`}
+                  >
+                    {formatYenSigned(happyStats.total)}
+                  </span>
+                </div>
+              </div>
+
               <div className="mt-4 h-64">
                 {happyStats.data.length === 0 ? (
                   <p className="text-sm text-zinc-500">データがありません</p>
