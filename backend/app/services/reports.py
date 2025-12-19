@@ -24,6 +24,11 @@ SESSION_ID = "debug-session"
 RUN_ID = "run1"
 logger = logging.getLogger("uvicorn.error")
 logger.setLevel(logging.DEBUG)
+REPORT_JSON_INSTRUCTION = (
+    "ここまでの会話内容をもとに日記レポートを出力してください。"
+    '必ず {"report_title": "...", "report_body": "..."} だけをJSONで返してください。'
+    "タイトルと本文は日本語で、前置きや説明文は不要です。"
+)
 
 
 def _ensure_client() -> OpenAI:
@@ -79,6 +84,18 @@ def _format_messages(system_prompt: str, messages: Iterable[ChatMessage]):
     return formatted
 
 
+def _build_conversation_history_text(messages: Iterable[ChatMessage]) -> str:
+    """元の会話を1本のテキストにまとめる（生成用にのみ使用、ログには含めない）。"""
+    lines = []
+    for idx, m in enumerate(messages, start=1):
+        speaker = "ユーザー" if m.role == "user" else "アシスタント"
+        lines.append(f"{idx}. {speaker}: {m.content}")
+    if not lines:
+        return "会話ログはまだありません。"
+    print(lines)
+    return "\n".join(lines)
+
+
 def stream_chat(tx_id: str, messages: List[ChatMessage], user_id: str) -> Generator[str, None, None]:
     event = get_transaction(tx_id)
     system_prompt = _build_system_prompt(event.model_dump())
@@ -125,7 +142,14 @@ def generate_report(tx_id: str, messages: List[ChatMessage], user_id: str) -> Ge
         '\nキーは "report_title", "report_body" とし、文章は日本語で書いてください。'
         "\n前置きや説明文は不要で、純粋なJSONだけを返してください。"
     )
-    formatted_messages = _format_messages(system_prompt, messages)
+    conversation_text = _build_conversation_history_text(messages)
+    user_generation_prompt = (
+        "以下はこれまでの会話ログです。内容を整理し、日記レポートを生成してください。\n"
+        f"{conversation_text}\n\n"
+        f"{REPORT_JSON_INSTRUCTION}"
+    )
+    generation_messages = [ChatMessage(role="user", content=user_generation_prompt)]
+    formatted_messages = _format_messages(system_prompt, generation_messages)
     try:
         # region agent log
         _log_debug(
@@ -154,7 +178,9 @@ def generate_report(tx_id: str, messages: List[ChatMessage], user_id: str) -> Ge
         {"tx_id": tx_id, "content_preview": content[:500]},
     )
     # endregion
-    final_messages = [*formatted_messages, {"role": "assistant", "content": content}]
+    # ログには元の会話のみを保存し、生成専用の追加プロンプトは含めない
+    log_messages = _format_messages(system_prompt, messages)
+    final_messages = [*log_messages, {"role": "assistant", "content": content}]
     try:
         append_chat_log(
             tx_id=tx_id,
@@ -195,6 +221,12 @@ def _parse_report_content(content: str) -> GenerateReportResponse:
     # 3. 素朴に JSON デコードを試す
     try:
         data = json.loads(content)
+        if isinstance(data, dict) and ("report_title" in data or "report_body" in data):
+            normalized = {
+                "report_title": (data.get("report_title") or "").strip(),
+                "report_body": (data.get("report_body") or "").strip(),
+            }
+            return GenerateReportResponse.model_validate(normalized)
         return GenerateReportResponse.model_validate(data)
     except Exception:
         # region agent log
@@ -210,7 +242,7 @@ def _parse_report_content(content: str) -> GenerateReportResponse:
     snippet = textwrap.shorten(content.replace("\n", " "), width=200, placeholder="...")
     raise HTTPException(
         status_code=500,
-        detail=f"Failed to parse report response: {snippet}",
+        detail="レポートの生成に失敗しました。少し会話を進めてから、もう一度生成してください。",
     )
 
 
