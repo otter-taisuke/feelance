@@ -26,10 +26,6 @@ export function TransactionForm({
   error,
 }: Props) {
   const moodScale = [-2, -1, 0, 1, 2];
-  const activeStarIndex = (() => {
-    const idx = moodScale.indexOf(form.mood_score);
-    return idx >= 0 ? idx : 2;
-  })();
 
   return (
     <div className="space-y-3">
@@ -72,10 +68,10 @@ export function TransactionForm({
         />
       </label>
 
-      <label className="block text-sm font-medium text-zinc-700">
-        心の動き
-        <div className="mt-2 space-y-2">
-          <div className="flex items-center gap-1 relative">
+      <div className="block text-sm font-medium text-zinc-700">
+        <div>心の動き</div>
+        <div className="mt-2 space-y-2" role="group" aria-label="心の動き">
+          <div className="relative flex items-center gap-1">
             {moodScale.map((value, idx) => {
               const isSelected = form.mood_score === value;
               const moodConfig = [
@@ -109,9 +105,8 @@ export function TransactionForm({
               );
             })}
           </div>
-          
         </div>
-      </label>
+      </div>
 
       <div className="flex items-center gap-2">
         <button
