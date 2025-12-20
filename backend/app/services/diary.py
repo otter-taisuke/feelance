@@ -12,7 +12,7 @@ from openai import OpenAI
 from dotenv import load_dotenv
 
 from app.constants.mood import get_mood_label
-from app.repositories.csv_store import append_chat_log, read_chat_log, read_diary, write_diary
+from app.repositories.csv_store import append_chat_log, read_chat_log, read_diary, read_transactions, write_diary
 from app.schemas.diary import ChatMessage, DiaryEntry, GenerateDiaryResponse
 from app.services.transactions import get_transaction
 
@@ -329,7 +329,13 @@ def _row_to_entry(row) -> DiaryEntry:
 
 
 def list_diaries(
-    user_id: str, year: Optional[int] = None, month: Optional[int] = None, tx_id: Optional[str] = None
+    user_id: str,
+    year: Optional[int] = None,
+    month: Optional[int] = None,
+    tx_id: Optional[str] = None,
+    price_min: Optional[float] = None,
+    price_max: Optional[float] = None,
+    sentiment: Optional[int] = None,
 ) -> List[DiaryEntry]:
     df = read_diary()
     if df.empty:
@@ -345,6 +351,25 @@ def list_diaries(
         df = df[df["effective_date"].dt.year == int(year)]
     if month is not None:
         df = df[df["effective_date"].dt.month == int(month)]
+
+    # 取引情報を付与して金額・感情スコアでフィルタリング
+    tx_df = read_transactions()
+    if not tx_df.empty:
+        tx_df = tx_df[tx_df["user_id"] == user_id][["id", "amount", "mood_score"]]
+        df = df.merge(tx_df, left_on="tx_id", right_on="id", how="left", suffixes=("", "_tx"))
+    else:
+        df["amount"] = None
+        df["mood_score"] = None
+
+    df["amount_value"] = pd.to_numeric(df.get("amount"), errors="coerce")
+    df["mood_value"] = pd.to_numeric(df.get("mood_score"), errors="coerce")
+
+    if price_min is not None:
+        df = df[df["amount_value"].notna() & (df["amount_value"] >= float(price_min))]
+    if price_max is not None:
+        df = df[df["amount_value"].notna() & (df["amount_value"] <= float(price_max))]
+    if sentiment is not None:
+        df = df[df["mood_value"].notna() & (df["mood_value"] == int(sentiment))]
 
     if df.empty:
         return []

@@ -232,11 +232,26 @@ export async function fetchDiaries(params?: {
   year?: number | null;
   month?: number | null;
   tx_id?: string | null;
+  price_min?: number | null;
+  price_max?: number | null;
+  sentiment?: number | null;
 }): Promise<DiaryEntry[]> {
   const searchParams = new URLSearchParams();
-  if (params?.year) searchParams.set("year", String(params.year));
-  if (params?.month) searchParams.set("month", String(params.month));
+  const setNumber = (key: string, value: number | null | undefined) => {
+    if (value === null || value === undefined) return;
+    const n = Number(value);
+    if (Number.isFinite(n)) {
+      searchParams.set(key, String(n));
+    }
+  };
+
+  setNumber("year", params?.year ?? undefined);
+  setNumber("month", params?.month ?? undefined);
   if (params?.tx_id) searchParams.set("tx_id", params.tx_id);
+  setNumber("price_min", params?.price_min ?? undefined);
+  setNumber("price_max", params?.price_max ?? undefined);
+  setNumber("sentiment", params?.sentiment ?? undefined);
+
   const qs = searchParams.toString();
   const url = qs ? `${API_BASE}/diary?${qs}` : `${API_BASE}/diary`;
 

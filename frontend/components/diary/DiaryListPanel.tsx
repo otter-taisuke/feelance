@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { LoginPanel } from "@/components/auth/LoginPanel";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { fetchDiaries, login, logout, me } from "@/lib/api";
+import { moodOptions } from "@/lib/mood";
 import type { DiaryEntry, User } from "@/lib/types";
 
 type DiaryListPanelProps = {
@@ -39,6 +40,10 @@ export function DiaryListPanel({ variant = "standalone", user: externalUser = nu
   const [draftYear, setDraftYear] = useState<number | null>(null);
   const [draftMonth, setDraftMonth] = useState<number | null>(null);
   const [keyword, setKeyword] = useState("");
+  const [priceMinInput, setPriceMinInput] = useState("");
+  const [priceMaxInput, setPriceMaxInput] = useState("");
+  const [sentiment, setSentiment] = useState<number | null>(null);
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   const [diaries, setDiaries] = useState<DiaryEntry[]>([]);
   const [loading, setLoading] = useState(false);
@@ -53,6 +58,26 @@ export function DiaryListPanel({ variant = "standalone", user: externalUser = nu
     const center = currentYear;
     return Array.from({ length: 9 }, (_, i) => center - 4 + i);
   }, [currentYear]);
+
+  const parseNumberInput = (value: string) => {
+    if (!value.trim()) return undefined;
+    const n = Number(value);
+    return Number.isFinite(n) ? n : undefined;
+  };
+
+  const hasSearchFilters = useMemo(() => {
+    const hasKeyword = Boolean(keyword.trim());
+    const hasMin = parseNumberInput(priceMinInput) !== undefined;
+    const hasMax = parseNumberInput(priceMaxInput) !== undefined;
+    const hasSentiment = sentiment !== null;
+    return hasKeyword || hasMin || hasMax || hasSentiment;
+  }, [keyword, priceMinInput, priceMaxInput, sentiment]);
+
+  useEffect(() => {
+    if (hasSearchFilters) {
+      setFiltersOpen(true);
+    }
+  }, [hasSearchFilters]);
 
   useEffect(() => {
     if (useExternalAuth) {
@@ -79,7 +104,26 @@ export function DiaryListPanel({ variant = "standalone", user: externalUser = nu
       setLoading(true);
       setError(null);
       try {
-        const data = await fetchDiaries({ year: currentYear, month: currentMonth });
+        const params: {
+          year?: number;
+          month?: number;
+          price_min?: number;
+          price_max?: number;
+          sentiment?: number;
+        } = {};
+
+        if (!hasSearchFilters) {
+          params.year = currentYear;
+          params.month = currentMonth;
+        }
+
+        const min = parseNumberInput(priceMinInput);
+        const max = parseNumberInput(priceMaxInput);
+        if (min !== undefined) params.price_min = min;
+        if (max !== undefined) params.price_max = max;
+        if (sentiment !== null) params.sentiment = sentiment;
+
+        const data = await fetchDiaries(params);
         setDiaries(data);
       } catch (e) {
         setError((e as Error).message);
@@ -88,7 +132,7 @@ export function DiaryListPanel({ variant = "standalone", user: externalUser = nu
       }
     };
     run();
-  }, [user, currentYear, currentMonth]);
+  }, [user, currentYear, currentMonth, hasSearchFilters, priceMinInput, priceMaxInput, sentiment, keyword]);
 
   const handleLogin = async () => {
     if (useExternalAuth) return;
@@ -140,14 +184,23 @@ export function DiaryListPanel({ variant = "standalone", user: externalUser = nu
 
   const cancelPicker = () => setPickerOpen(false);
 
+  const useAllTime = hasSearchFilters;
+
   const filteredDiaries = useMemo(() => {
-    if (!keyword) return diaries;
-    const lower = keyword.toLowerCase();
+    const q = keyword.trim().toLowerCase();
+    if (!q) return diaries;
     return diaries.filter((d) => {
       const target = `${d.diary_title || ""} ${d.diary_body || ""} ${d.event_name || ""}`.toLowerCase();
-      return target.includes(lower);
+      return target.includes(q);
     });
   }, [diaries, keyword]);
+
+  const resetFilters = () => {
+    setKeyword("");
+    setPriceMinInput("");
+    setPriceMaxInput("");
+    setSentiment(null);
+  };
 
   const bodyContent = (
     <div className="rounded-lg bg-white p-6 shadow-sm space-y-6">
@@ -205,7 +258,9 @@ export function DiaryListPanel({ variant = "standalone", user: externalUser = nu
                 来月 →
               </button>
             </div>
-            <div className="text-sm text-zinc-500">クリックで年月選択</div>
+          <div className="text-sm text-zinc-500">
+            {useAllTime ? "フィルター/検索中は全期間が対象になります" : "クリックで年月選択"}
+          </div>
           </div>
 
           {pickerOpen && (
@@ -255,14 +310,144 @@ export function DiaryListPanel({ variant = "standalone", user: externalUser = nu
             </div>
           )}
 
-          <div className="rounded-lg border border-zinc-200 bg-white px-4 py-3 shadow-sm">
-            <label className="text-sm text-zinc-600">キーワード検索（タイトル/本文/イベント）</label>
-            <input
-              className="mt-2 w-full rounded border border-zinc-300 p-2"
-              placeholder="例: ラーメン, 旅行, 嬉しい"
-              value={keyword}
-              onChange={(e) => setKeyword(e.target.value)}
-            />
+          <div className="rounded-lg border border-zinc-200 bg-white px-4 py-4 shadow-sm space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex flex-col">
+                <label className="text-sm font-medium text-zinc-700">検索・フィルター</label>
+                <p className="text-xs text-zinc-500">条件を指定すると全期間を対象に検索します</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <div
+                  className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                    useAllTime ? "bg-black text-white" : "bg-zinc-100 text-zinc-700"
+                  }`}
+                >
+                  {useAllTime ? "全期間を検索" : `${currentYear}年${currentMonth}月`}
+                </div>
+                <button
+                  type="button"
+                  className="flex h-9 w-9 items-center justify-center rounded-full text-2xl text-zinc-700 transition hover:bg-zinc-100 hover:text-black"
+                  onClick={() => setFiltersOpen((v) => !v)}
+                  aria-expanded={filtersOpen}
+                  aria-label={filtersOpen ? "フィルターを閉じる" : "フィルターを開く"}
+                >
+                  <span
+                    className={`transition-transform duration-200 ${filtersOpen ? "rotate-180" : "rotate-0"}`}
+                    aria-hidden
+                  >
+                    ▾
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            {!filtersOpen && (
+              <div className="flex flex-wrap gap-2 text-xs text-zinc-600">
+                {hasSearchFilters ? (
+                  <>
+                    <span className="rounded-full bg-zinc-100 px-2 py-1">フィルター適用中</span>
+                    {keyword && <span className="rounded-full bg-zinc-100 px-2 py-1">キーワード: {keyword}</span>}
+                    {parseNumberInput(priceMinInput) !== undefined && (
+                      <span className="rounded-full bg-zinc-100 px-2 py-1">最小: {priceMinInput}</span>
+                    )}
+                    {parseNumberInput(priceMaxInput) !== undefined && (
+                      <span className="rounded-full bg-zinc-100 px-2 py-1">最大: {priceMaxInput}</span>
+                    )}
+                    {sentiment !== null && (
+                      <span className="rounded-full bg-zinc-100 px-2 py-1">
+                        感情: {moodOptions.find((m) => m.value === sentiment)?.label ?? sentiment}
+                      </span>
+                    )}
+                  </>
+                ) : (
+                  <span className="text-zinc-500">現在フィルターは未指定です</span>
+                )}
+              </div>
+            )}
+
+            <div
+              className={`overflow-hidden transition-all duration-300 ${
+                filtersOpen ? "max-h-[1600px] opacity-100" : "max-h-0 opacity-0"
+              }`}
+              aria-hidden={!filtersOpen}
+            >
+              <div className="space-y-3 pt-2">
+                <div className="space-y-2">
+                  <label className="text-sm text-zinc-600">キーワード（タイトル/本文/イベント）</label>
+                  <input
+                    className="w-full rounded border border-zinc-300 p-2"
+                    placeholder="例: ラーメン, 旅行, 嬉しい"
+                    value={keyword}
+                    onChange={(e) => setKeyword(e.target.value)}
+                  />
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="space-y-1">
+                    <label className="text-sm text-zinc-600">金額（最小）</label>
+                    <input
+                      type="number"
+                      className="w-full rounded border border-zinc-300 p-2"
+                      placeholder="下限なし"
+                      value={priceMinInput}
+                      onChange={(e) => setPriceMinInput(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-sm text-zinc-600">金額（最大）</label>
+                    <input
+                      type="number"
+                      className="w-full rounded border border-zinc-300 p-2"
+                      placeholder="上限なし"
+                      value={priceMaxInput}
+                      onChange={(e) => setPriceMaxInput(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm text-zinc-600">感情スコア（5段階）</label>
+                    <button
+                      className="text-xs text-zinc-500 underline underline-offset-2"
+                      type="button"
+                      onClick={() => setSentiment(null)}
+                    >
+                      クリア
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {moodOptions.map((m) => {
+                      const active = sentiment === m.value;
+                      return (
+                        <button
+                          key={m.value}
+                          type="button"
+                          className={`rounded border px-3 py-2 text-sm transition ${
+                            active
+                              ? "border-black bg-black text-white"
+                              : "border-zinc-300 bg-white text-zinc-800 hover:border-zinc-500"
+                          }`}
+                          onClick={() => setSentiment(m.value)}
+                        >
+                          {m.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    className="rounded border border-zinc-300 px-3 py-2 text-sm text-zinc-700 hover:border-zinc-500"
+                    onClick={resetFilters}
+                  >
+                    条件をクリア
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
 
           {error && (
