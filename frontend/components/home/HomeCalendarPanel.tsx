@@ -39,6 +39,12 @@ const formatDateLocal = (date: Date) => {
 
 const getToday = () => formatDateLocal(new Date());
 
+const getFirstDayFromMonthStr = (monthStr: string) => {
+  const [y, m] = monthStr.split("-").map(Number);
+  if (!Number.isFinite(y) || !Number.isFinite(m)) return getToday();
+  return formatDateLocal(new Date(y, m - 1, 1));
+};
+
 const getAllDaysInMonth = (year: number, month: number) => {
   const days: string[] = [];
   const lastDay = new Date(year, month + 1, 0).getDate();
@@ -48,13 +54,22 @@ const getAllDaysInMonth = (year: number, month: number) => {
   return days;
 };
 
-type HomeCalendarPanelProps = {
-  user: User | null;
+const formatMonthParam = (date: Date) => {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  return `${y}-${m}`;
 };
 
-export function HomeCalendarPanel({ user }: HomeCalendarPanelProps) {
+type HomeCalendarPanelProps = {
+  user: User | null;
+  selectedMonth: string;
+  onChangeMonth: (month: string) => void;
+};
+
+export function HomeCalendarPanel({ user, selectedMonth, onChangeMonth }: HomeCalendarPanelProps) {
   const router = useRouter();
-  const [selectedDate, setSelectedDate] = useState<string>(() => getToday());
+
+  const [selectedDate, setSelectedDate] = useState<string>(() => getFirstDayFromMonthStr(selectedMonth));
   const [showModal, setShowModal] = useState(false);
   const [showDiarySelectModal, setShowDiarySelectModal] = useState(false);
   const [startInEventList, setStartInEventList] = useState(false);
@@ -90,6 +105,27 @@ export function HomeCalendarPanel({ user }: HomeCalendarPanelProps) {
     loadTransactions(user.user_id);
   }, [user, loadTransactions, resetTransactions]);
 
+  useEffect(() => {
+    const firstDay = getFirstDayFromMonthStr(selectedMonth);
+    setSelectedDate((prev) => {
+      const prevDate = new Date(`${prev}T00:00:00`);
+      if (!Number.isNaN(prevDate.getTime()) && formatMonthParam(prevDate) === selectedMonth) {
+        return prev;
+      }
+      return firstDay;
+    });
+  }, [selectedMonth]);
+
+  const setDateAndSyncMonth = (dateStr: string) => {
+    setSelectedDate(dateStr);
+    const parsed = new Date(`${dateStr}T00:00:00`);
+    if (Number.isNaN(parsed.getTime())) return;
+    const monthStr = formatMonthParam(parsed);
+    if (monthStr !== selectedMonth) {
+      onChangeMonth(monthStr);
+    }
+  };
+
   const dayTransactions = useMemo(
     () => transactions.filter((t) => t.date === selectedDate),
     [transactions, selectedDate],
@@ -108,7 +144,7 @@ export function HomeCalendarPanel({ user }: HomeCalendarPanelProps) {
     [transactions],
   );
 
-  const selectedMonth = useMemo(() => {
+  const selectedMonthInfo = useMemo(() => {
     if (!selectedDate) return null;
     const base = new Date(`${selectedDate}T00:00:00`);
     return {
@@ -124,11 +160,11 @@ export function HomeCalendarPanel({ user }: HomeCalendarPanelProps) {
     }
 
     if (granularity === "day") {
-      if (!selectedMonth) return { data: [], total: 0, label: "" };
+      if (!selectedMonthInfo) return { data: [], total: 0, label: "" };
       const grouped = new Map<string, { positive: number; negative: number }>();
       transactions.forEach((t) => {
         const d = new Date(`${t.date}T00:00:00`);
-        if (d.getFullYear() === selectedMonth.year && d.getMonth() === selectedMonth.month) {
+        if (d.getFullYear() === selectedMonthInfo.year && d.getMonth() === selectedMonthInfo.month) {
           const current = grouped.get(t.date) ?? { positive: 0, negative: 0 };
           if (t.happy_amount >= 0) {
             current.positive += t.happy_amount;
@@ -138,7 +174,7 @@ export function HomeCalendarPanel({ user }: HomeCalendarPanelProps) {
           grouped.set(t.date, current);
         }
       });
-      const fullDays = getAllDaysInMonth(selectedMonth.year, selectedMonth.month);
+      const fullDays = getAllDaysInMonth(selectedMonthInfo.year, selectedMonthInfo.month);
       const data = fullDays.map((date) => {
         const happy = grouped.get(date) ?? { positive: 0, negative: 0 };
         return {
@@ -148,11 +184,11 @@ export function HomeCalendarPanel({ user }: HomeCalendarPanelProps) {
         };
       });
       const total = data.reduce((sum, entry) => sum + entry.positive + entry.negative, 0);
-      return { data, total, label: `${selectedMonth.label}` };
+      return { data, total, label: `${selectedMonthInfo.label}` };
     }
 
     if (granularity === "month") {
-      const baseYear = statsYear ?? selectedMonth?.year ?? new Date().getFullYear();
+      const baseYear = statsYear ?? selectedMonthInfo?.year ?? new Date().getFullYear();
       const grouped = new Map<number, { positive: number; negative: number }>();
       transactions.forEach((t) => {
         const d = new Date(`${t.date}T00:00:00`);
@@ -197,7 +233,7 @@ export function HomeCalendarPanel({ user }: HomeCalendarPanelProps) {
       .sort((a, b) => a.label.localeCompare(b.label));
     const total = data.reduce((sum, entry) => sum + entry.positive + entry.negative, 0);
     return { data, total, label: "全期間" };
-  }, [granularity, selectedMonth, transactions, statsYear]);
+  }, [granularity, selectedMonthInfo, transactions, statsYear]);
 
   const happyScaleDomain = useMemo<[number, number]>(() => {
     if (happyStats.data.length === 0) {
@@ -221,30 +257,36 @@ export function HomeCalendarPanel({ user }: HomeCalendarPanelProps) {
   useEffect(() => {
     if (granularity === "month") {
       if (statsYear === null) {
-        setStatsYear(selectedMonth?.year ?? new Date().getFullYear());
+        setStatsYear(selectedMonthInfo?.year ?? new Date().getFullYear());
       }
     } else if (granularity !== "day") {
       setStatsPickerOpen(false);
     }
-  }, [granularity, selectedMonth, statsYear]);
+  }, [granularity, selectedMonthInfo, statsYear]);
 
-  const statsYearDisplay = statsYear ?? selectedMonth?.year ?? new Date().getFullYear();
+  const statsYearDisplay = statsYear ?? selectedMonthInfo?.year ?? new Date().getFullYear();
 
   const changeStatsYear = (delta: number) => {
     setStatsYear((prev) => (prev ?? statsYearDisplay) + delta);
   };
 
   const moveStatsMonth = (delta: number) => {
-    const base = selectedMonth
-      ? new Date(selectedMonth.year, selectedMonth.month, 1)
+    const base = selectedMonthInfo
+      ? new Date(selectedMonthInfo.year, selectedMonthInfo.month, 1)
       : new Date();
     const target = new Date(base.getFullYear(), base.getMonth() + delta, 1);
-    setSelectedDate(formatDateLocal(target));
+    setDateAndSyncMonth(formatDateLocal(target));
+  };
+
+  const jumpToCurrentMonth = () => {
+    const now = new Date();
+    const firstDay = formatDateLocal(new Date(now.getFullYear(), now.getMonth(), 1));
+    setDateAndSyncMonth(firstDay);
   };
 
   const openStatsPicker = () => {
-    const base = selectedMonth
-      ? { year: selectedMonth.year, month: selectedMonth.month + 1 }
+    const base = selectedMonthInfo
+      ? { year: selectedMonthInfo.year, month: selectedMonthInfo.month + 1 }
       : { year: new Date().getFullYear(), month: new Date().getMonth() + 1 };
     setStatsDraftYear(base.year);
     setStatsDraftMonth(base.month);
@@ -254,7 +296,7 @@ export function HomeCalendarPanel({ user }: HomeCalendarPanelProps) {
   const applyStatsPicker = () => {
     if (statsDraftYear && statsDraftMonth) {
       const target = new Date(statsDraftYear, statsDraftMonth - 1, 1);
-      setSelectedDate(formatDateLocal(target));
+      setDateAndSyncMonth(formatDateLocal(target));
     }
     setStatsPickerOpen(false);
   };
@@ -304,7 +346,7 @@ export function HomeCalendarPanel({ user }: HomeCalendarPanelProps) {
   const handleChangeGranularity = (g: Granularity) => {
     setGranularity(g);
     if (g === "month") {
-      setStatsYear((prev) => prev ?? selectedMonth?.year ?? new Date().getFullYear());
+      setStatsYear((prev) => prev ?? selectedMonthInfo?.year ?? new Date().getFullYear());
       setStatsPickerOpen(false);
     } else {
       setStatsPickerOpen(false);
@@ -375,7 +417,7 @@ export function HomeCalendarPanel({ user }: HomeCalendarPanelProps) {
   };
 
   const openModalForDate = (dateStr: string) => {
-    setSelectedDate(dateStr);
+    setDateAndSyncMonth(dateStr);
     resetForm(dateStr);
     const hasEventsForDate = transactions.some((t) => t.date === dateStr);
     setStartInEventList(hasEventsForDate);
@@ -385,7 +427,7 @@ export function HomeCalendarPanel({ user }: HomeCalendarPanelProps) {
   const handleEventClick = (eventId: string) => {
     const target = transactions.find((t) => t.id === eventId);
     if (!target) return;
-    setSelectedDate(target.date);
+    setDateAndSyncMonth(target.date);
     resetForm(target.date);
     setStartInEventList(true);
     setShowModal(true);
@@ -432,9 +474,7 @@ export function HomeCalendarPanel({ user }: HomeCalendarPanelProps) {
           onEventClick={handleEventClick}
           onMonthChange={(year, month) => {
             const firstDayOfMonth = formatDateLocal(new Date(year, month, 1));
-            if (selectedDate !== firstDayOfMonth) {
-              setSelectedDate(firstDayOfMonth);
-            }
+            setDateAndSyncMonth(firstDayOfMonth);
           }}
         />
       </div>
@@ -458,7 +498,7 @@ export function HomeCalendarPanel({ user }: HomeCalendarPanelProps) {
                   className="text-sm font-semibold text-zinc-800"
                   disabled={loading}
                 >
-                  {happyStats.label || selectedMonth?.label || ""}
+                  {happyStats.label || selectedMonthInfo?.label || ""}
                 </button>
                 <button
                   className="rounded border border-zinc-300 px-2 py-1 text-sm text-zinc-700 hover:border-zinc-500"
@@ -466,6 +506,13 @@ export function HomeCalendarPanel({ user }: HomeCalendarPanelProps) {
                   disabled={loading}
                 >
                   →
+                </button>
+                <button
+                  className="rounded border border-zinc-300 px-3 py-1 text-sm text-zinc-700 hover:border-zinc-500"
+                  onClick={jumpToCurrentMonth}
+                  disabled={loading}
+                >
+                  今月
                 </button>
                 {statsPickerOpen && (
                   <div className="absolute left-1/2 z-20 mt-10 w-64 -translate-x-1/2 rounded-lg border border-zinc-200 bg-white p-3 shadow-lg">

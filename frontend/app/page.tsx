@@ -12,12 +12,29 @@ import type { User } from "@/lib/types";
 
 type TabKey = "calendar" | "diary";
 
+const getCurrentMonth = () => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  return `${year}-${month}`;
+};
+
+const parseMonthParam = (value: string | null) => {
+  if (!value) return null;
+  if (!/^\d{4}-\d{2}$/.test(value)) return null;
+  const [y, m] = value.split("-").map(Number);
+  if (!Number.isFinite(y) || !Number.isFinite(m)) return null;
+  if (m < 1 || m > 12) return null;
+  return `${String(y).padStart(4, "0")}-${String(m).padStart(2, "0")}`;
+};
+
 export default function Home() {
   const [userIdInput, setUserIdInput] = useState("");
   const [user, setUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabKey>("calendar");
+  const [selectedMonth, setSelectedMonth] = useState<string>(() => getCurrentMonth());
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -38,12 +55,38 @@ export default function Home() {
 
   useEffect(() => {
     const tabParam = searchParams.get("tab");
-    if (tabParam === "diary") {
-      setActiveTab("diary");
-    } else if (tabParam === "calendar") {
-      setActiveTab("calendar");
+    const nextTab: TabKey = tabParam === "diary" ? "diary" : "calendar";
+    setActiveTab(nextTab);
+
+    const monthParam = parseMonthParam(searchParams.get("month"));
+    if (monthParam) {
+      setSelectedMonth(monthParam);
+    } else {
+      const current = getCurrentMonth();
+      setSelectedMonth(current);
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("tab", nextTab);
+      params.set("month", current);
+      router.replace(`/?${params.toString()}`, { scroll: false });
     }
-  }, [searchParams]);
+  }, [searchParams, router]);
+
+  const handleTabChange = (key: TabKey) => {
+    setActiveTab(key);
+    const params = new URLSearchParams();
+    params.set("tab", key);
+    params.set("month", selectedMonth);
+    router.push(`/?${params.toString()}`, { scroll: false });
+  };
+
+  const handleMonthChange = (monthStr: string) => {
+    const normalized = parseMonthParam(monthStr) ?? getCurrentMonth();
+    setSelectedMonth(normalized);
+    const params = new URLSearchParams();
+    params.set("tab", activeTab);
+    params.set("month", normalized);
+    router.push(`/?${params.toString()}`, { scroll: false });
+  };
 
   const handleLogin = async () => {
     setError(null);
@@ -100,10 +143,7 @@ export default function Home() {
                       ? "bg-black text-white"
                       : "bg-white text-zinc-700 hover:bg-zinc-100"
                   }`}
-                  onClick={() => {
-                    setActiveTab(key);
-                    router.push(`/?tab=${key}`);
-                  }}
+                  onClick={() => handleTabChange(key)}
                 >
                   {key === "calendar" ? "カレンダー" : "日記一覧"}
                 </button>
@@ -113,7 +153,11 @@ export default function Home() {
 
           <div>
             {activeTab === "calendar" ? (
-              <HomeCalendarPanel user={user} />
+              <HomeCalendarPanel
+                user={user}
+                selectedMonth={selectedMonth}
+                onChangeMonth={handleMonthChange}
+              />
             ) : (
               <DiaryListPanel variant="embedded" user={user} />
             )}

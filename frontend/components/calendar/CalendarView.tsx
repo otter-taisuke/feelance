@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { EventClickArg, CalendarApi } from "@fullcalendar/core";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import interactionPlugin from "@fullcalendar/interaction";
@@ -56,6 +56,16 @@ export function CalendarView({
   const [pickerOpen, setPickerOpen] = useState(false);
   const [draftYear, setDraftYear] = useState(currentDate.getFullYear());
   const [draftMonth, setDraftMonth] = useState(currentDate.getMonth() + 1); // 1-12
+
+  useEffect(() => {
+    if (!calendarApi) return;
+    calendarApi.gotoDate(selectedDate);
+    const parsed = new Date(`${selectedDate}T00:00:00`);
+    if (Number.isNaN(parsed.getTime())) return;
+    setCurrentDate(parsed);
+    setDraftYear(parsed.getFullYear());
+    setDraftMonth(parsed.getMonth() + 1);
+  }, [selectedDate, calendarApi]);
 
   const handleEventClick = (info: EventClickArg) => {
     onEventClick(info.event.id);
