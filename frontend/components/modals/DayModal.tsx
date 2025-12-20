@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { MoodOption, Transaction, TransactionForm as FormState } from "@/lib/types";
 
 import { HappyChan } from "@/components/common/HappyChan";
@@ -45,6 +45,7 @@ export function DayModal({
 }: Props) {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showEventList, setShowEventList] = useState(startInEventList);
+  const prevFormIdRef = useRef<string | undefined>(form.id);
 
   useEffect(() => {
     if (open) {
@@ -57,6 +58,19 @@ export function DayModal({
       setShowEditModal(false);
     }
   }, [form.id]);
+
+  // 新規作成から編集モードに変わった時（保存成功時）にハッピーちゃん表示後にイベント一覧に遷移
+  useEffect(() => {
+    // 前回はidが無く、今回idが設定された場合（新規追加成功）
+    if (!prevFormIdRef.current && form.id && !showEventList) {
+      // ハッピーちゃんのアニメーション（3秒）が終わってから遷移
+      const timer = setTimeout(() => {
+        setShowEventList(true);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+    prevFormIdRef.current = form.id;
+  }, [form.id, showEventList]);
 
   const handleShowEventList = () => setShowEventList(true);
 
