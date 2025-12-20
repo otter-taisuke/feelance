@@ -219,7 +219,10 @@ export function DayModal({
       {showEditModal && form.id && (
         <div
           className="fixed inset-0 z-[60] flex items-start justify-center bg-black/50 p-4"
-          onClick={() => setShowEditModal(false)}
+          onClick={() => {
+            setShowEditModal(false);
+            onClose();
+          }}
           role="presentation"
         >
           <div
@@ -231,7 +234,10 @@ export function DayModal({
             <div className="flex items-center justify-between gap-3">
               <h3 className="text-lg font-semibold">{formatDateWithWeekday(selectedDate)}</h3>
               <button
-                onClick={() => setShowEditModal(false)}
+                onClick={() => {
+                  setShowEditModal(false);
+                  onClose();
+                }}
                 className="text-sm text-zinc-500 hover:font-bold"
               >
                 閉じる
