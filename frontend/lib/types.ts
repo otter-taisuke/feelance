@@ -87,12 +87,19 @@ export type EmotionBucket = {
   short_label?: string;
 };
 
+export type DailyMood = {
+  date: string;
+  mood_score: number;
+  count: number;
+};
+
 export type RetrospectiveSummary = {
   happy_money_top3_diaries: RetrospectiveDiary[];
   happy_money_worst3_diaries: RetrospectiveDiary[];
   yearly_happy_money_top3: RetrospectiveEvent[];
   yearly_happy_money_worst3: RetrospectiveEvent[];
   emotion_buckets: EmotionBucket[];
+  daily_moods: DailyMood[];
   summary_text: string;
   diary_top_insufficient: boolean;
   diary_worst_insufficient: boolean;

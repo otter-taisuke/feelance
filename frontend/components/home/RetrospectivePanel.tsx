@@ -35,6 +35,18 @@ const MOOD_COLORS: Record<number, string> = {
   [-2]: "#dc2626", // text-red-600
 };
 
+// GitHubの草風カラー（青→灰→赤）
+const MOOD_TILE_COLORS: Record<number, string> = {
+  2: "#2563eb", // 濃い青
+  1: "#93c5fd", // 薄い青
+  0: "#e5e7eb", // 灰
+  [-1]: "#fecdd3", // 薄い赤
+  [-2]: "#ef4444", // 赤
+};
+const EMPTY_TILE_COLOR = "#f8fafc";
+
+type HeatmapCell = { date: string | null; mood: number | null; count: number };
+
 const SECTION_CLASS = "rounded-lg bg-white p-4 shadow-sm";
 
 const formatYen = (value: number) =>
@@ -209,6 +221,48 @@ export function RetrospectivePanel({ user, months = 12 }: Props) {
     });
   }, [summary, moodLabelMap]);
 
+  const heatmapWeeks = useMemo(() => {
+    if (!summary?.daily_moods) return [];
+
+    const map = new Map(summary.daily_moods.map((d) => [d.date, d]));
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const start = new Date(today);
+    start.setDate(start.getDate() - 364);
+
+    const cells: HeatmapCell[] = [];
+
+    const startPad = start.getDay();
+    for (let i = 0; i < startPad; i += 1) {
+      cells.push({ date: null, mood: null, count: 0 });
+    }
+
+    for (
+      let cursor = new Date(start);
+      cursor <= today;
+      cursor = new Date(cursor.getFullYear(), cursor.getMonth(), cursor.getDate() + 1)
+    ) {
+      const dateStr = cursor.toISOString().slice(0, 10);
+      const hit = map.get(dateStr);
+      cells.push({
+        date: dateStr,
+        mood: hit?.mood_score ?? 0,
+        count: hit?.count ?? 0,
+      });
+    }
+
+    const endPad = 6 - today.getDay();
+    for (let i = 0; i < endPad; i += 1) {
+      cells.push({ date: null, mood: null, count: 0 });
+    }
+
+    const weeks: HeatmapCell[][] = [];
+    for (let i = 0; i < cells.length; i += 7) {
+      weeks.push(cells.slice(i, i + 7));
+    }
+    return weeks;
+  }, [summary]);
+
   return (
     <div className="flex flex-col gap-6">
       <div className={`${SECTION_CLASS} flex flex-col gap-4`}>
@@ -314,6 +368,54 @@ export function RetrospectivePanel({ user, months = 12 }: Props) {
                 <Legend />
               </PieChart>
             </ResponsiveContainer>
+          </div>
+        )}
+      </div>
+
+      <div className={SECTION_CLASS}>
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-lg font-semibold">心の草（過去1年）</h2>
+          <div className="flex items-center gap-2 text-xs text-zinc-600">
+            {[2, 1, 0, -1, -2].map((score) => (
+              <span key={score} className="flex items-center gap-1">
+                <span
+                  className="inline-block h-3 w-3 rounded-[2px] border border-zinc-200"
+                  style={{ backgroundColor: MOOD_TILE_COLORS[score] }}
+                />
+                <span>{getMoodLabel(score)}</span>
+              </span>
+            ))}
+          </div>
+        </div>
+        {heatmapWeeks.length === 0 ? (
+          <p className="text-sm text-zinc-500">データがありません</p>
+        ) : (
+          <div className="flex gap-[3px] overflow-x-auto pb-1">
+            {heatmapWeeks.map((week, idx) => (
+              <div key={`week-${idx}`} className="grid grid-rows-7 gap-[3px]">
+                {week.map((cell, dayIdx) => {
+                  const color =
+                    cell.date === null
+                      ? EMPTY_TILE_COLOR
+                      : MOOD_TILE_COLORS[cell.mood ?? 0] ?? MOOD_TILE_COLORS[0];
+                  const label =
+                    cell.date === null
+                      ? ""
+                      : `${cell.date.replace(/-/g, "/")} | ${getMoodLabel(cell.mood ?? 0)} | ${
+                          cell.count
+                        }件`;
+                  return (
+                    <div
+                      key={`${cell.date ?? "empty"}-${dayIdx}`}
+                      className="h-3 w-3 rounded-[3px] border border-zinc-200/60"
+                      style={{ backgroundColor: color }}
+                      title={label}
+                      aria-label={cell.date ? label : undefined}
+                    />
+                  );
+                })}
+              </div>
+            ))}
           </div>
         )}
       </div>
