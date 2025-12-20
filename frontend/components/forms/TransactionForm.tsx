@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { MoodOption, TransactionForm as FormState } from "@/lib/types";
+import { HappyChan } from "@/components/common/HappyChan";
 
 type Props = {
   form: FormState;
@@ -30,7 +31,7 @@ export function TransactionForm({
 }: Props) {
   const moodScale = [-2, -1, 0, 1, 2];
   const prevFormIdRef = useRef<string | undefined>(form.id);
-  const [showBird, setShowBird] = useState(false);
+  const [showHappyChan, setShowHappyChan] = useState(false);
 
   // YYYY-MM-DD形式をyyyy/mm/dd形式に変換
   const formatDateForDisplay = (dateStr: string): string => {
@@ -61,14 +62,32 @@ export function TransactionForm({
     setDateDisplayValue(formatDateForDisplay(form.date));
   }, [form.date]);
 
-  // 新規追加成功時に鳥を表示
+  // 感情スコアに応じたハッピーちゃんのバリエーションを取得
+  const getHappyChanVariant = (moodScore: number): "sobad" | "sad" | "standard" | "happy" | "excited" => {
+    if (moodScore <= -2) return "sobad";
+    if (moodScore === -1) return "sad";
+    if (moodScore === 0) return "standard";
+    if (moodScore === 1) return "happy";
+    return "excited";
+  };
+
+  // 感情スコアに応じたメッセージを取得
+  const getMessage = (moodScore: number): string => {
+    if (moodScore <= -2) return "辛かったね。でもいつかきっと、笑える日が来るよ。";
+    if (moodScore === -1) return "残念。明日は良いことがあるよ。";
+    if (moodScore === 0) return "普通であることの幸せを噛みしめて。";
+    if (moodScore === 1) return "良かったね。君が幸せなら僕も幸せさ。";
+    return "気分はどうだい？世界はもう、君のためにあるようなものさ！";
+  };
+
+  // 新規追加成功時にハッピーちゃんを表示
   useEffect(() => {
     // 前回はidが無く、今回idが設定された場合（新規追加成功）
     if (!prevFormIdRef.current && form.id) {
-      setShowBird(true);
+      setShowHappyChan(true);
       // 3秒後に自動で非表示
       const timer = setTimeout(() => {
-        setShowBird(false);
+        setShowHappyChan(false);
       }, 3000);
       return () => clearTimeout(timer);
     }
@@ -208,33 +227,13 @@ export function TransactionForm({
       </div>
       {error && <p className="text-sm text-red-500">{error}</p>}
       
-      {/* 鳥のアニメーション */}
-      {showBird && (
+      {/* ハッピーちゃんのアニメーション */}
+      {showHappyChan && (
         <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
-          <div className="animate-bounce">
-            <div className="flex flex-col items-center gap-2 bg-white rounded-lg shadow-lg p-6 border-2 border-blue-200">
-              <div className="relative w-32 h-32 flex items-center justify-center">
-                <img
-                  src="/bird.png"
-                  alt="鳥"
-                  className="w-32 h-32 object-contain"
-                  onError={(e) => {
-                    // 画像が読み込めない場合は非表示にして絵文字を表示
-                    const parent = e.currentTarget.parentElement;
-                    if (parent) {
-                      e.currentTarget.style.display = "none";
-                      const fallback = parent.querySelector(".bird-emoji-fallback") as HTMLElement;
-                      if (fallback) {
-                        fallback.style.display = "flex";
-                      }
-                    }
-                  }}
-                />
-                <div className="absolute inset-0 flex items-center justify-center text-8xl bird-emoji-fallback" style={{ display: "none" }}>
-                  🐦
-                </div>
-              </div>
-              <p className="text-xl font-bold text-blue-600">良かったね！</p>
+          <div className="animate-fade-in">
+            <div className="flex flex-col items-center gap-3 bg-white rounded-lg shadow-lg p-6 border-2 border-blue-200 max-w-md">
+              <HappyChan size="large" variant={getHappyChanVariant(form.mood_score)} />
+              <p className="text-lg font-bold text-blue-600 text-center">{getMessage(form.mood_score)}</p>
             </div>
           </div>
         </div>
