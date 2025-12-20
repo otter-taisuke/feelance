@@ -5,11 +5,9 @@ import { useRouter } from "next/navigation";
 import {
   Bar,
   BarChart,
-  CartesianGrid,
   LabelList,
   ReferenceLine,
   ResponsiveContainer,
-  Tooltip,
   XAxis,
   YAxis,
 } from "recharts";
@@ -40,6 +38,15 @@ const formatDateLocal = (date: Date) => {
 };
 
 const getToday = () => formatDateLocal(new Date());
+
+const getAllDaysInMonth = (year: number, month: number) => {
+  const days: string[] = [];
+  const lastDay = new Date(year, month + 1, 0).getDate();
+  for (let d = 1; d <= lastDay; d += 1) {
+    days.push(formatDateLocal(new Date(year, month, d)));
+  }
+  return days;
+};
 
 type HomeCalendarPanelProps = {
   user: User | null;
@@ -131,13 +138,15 @@ export function HomeCalendarPanel({ user }: HomeCalendarPanelProps) {
           grouped.set(t.date, current);
         }
       });
-      const data = Array.from(grouped.entries())
-        .map(([date, happy]) => ({
+      const fullDays = getAllDaysInMonth(selectedMonth.year, selectedMonth.month);
+      const data = fullDays.map((date) => {
+        const happy = grouped.get(date) ?? { positive: 0, negative: 0 };
+        return {
           label: date,
           positive: happy.positive,
           negative: happy.negative,
-        }))
-        .sort((a, b) => a.label.localeCompare(b.label));
+        };
+      });
       const total = data.reduce((sum, entry) => sum + entry.positive + entry.negative, 0);
       return { data, total, label: `${selectedMonth.label}` };
     }
@@ -203,6 +212,12 @@ export function HomeCalendarPanel({ user }: HomeCalendarPanelProps) {
     return [-padded, padded];
   }, [happyStats.data]);
 
+  const todayStr = useMemo(() => getToday(), []);
+  const todayInRange = useMemo(
+    () => happyStats.data.some((d) => d.label === todayStr),
+    [happyStats.data, todayStr],
+  );
+
   useEffect(() => {
     if (granularity === "month") {
       if (statsYear === null) {
@@ -259,7 +274,7 @@ export function HomeCalendarPanel({ user }: HomeCalendarPanelProps) {
     const labelY = (y ?? 0) - 6; // 少し上に配置
     return (
       <text x={centerX} y={labelY} textAnchor="middle" fill={HAPPY_POSITIVE_COLOR} fontSize={12}>
-        {formatYenSigned(value)}
+        {formatSigned(value)}
       </text>
     );
   };
@@ -272,9 +287,18 @@ export function HomeCalendarPanel({ user }: HomeCalendarPanelProps) {
     const labelY = (y ?? 0) + 12;
     return (
       <text x={centerX} y={labelY} textAnchor="middle" fill={HAPPY_NEGATIVE_COLOR} fontSize={12}>
-        {formatYenSigned(value)}
+        {formatSigned(value)}
       </text>
     );
+  };
+
+  const todayLabelProps = {
+    value: "今日",
+    position: "bottom" as const,
+    fill: "#f97316",
+    fontSize: 11,
+    fontWeight: "bold" as const,
+    offset: 26,
   };
 
   const handleChangeGranularity = (g: Granularity) => {
@@ -287,9 +311,16 @@ export function HomeCalendarPanel({ user }: HomeCalendarPanelProps) {
     }
   };
 
+  const formatSigned = (v: number) => {
+    const sign = v > 0 ? "+" : v < 0 ? "-" : "";
+    const absTruncated = Math.trunc(Math.abs(v));
+    return `${sign}${absTruncated.toLocaleString("ja-JP")}`;
+  };
+
   const formatYenSigned = (v: number) => {
     const sign = v > 0 ? "+" : v < 0 ? "-" : "";
-    return `￥${sign}${Math.abs(v).toLocaleString("ja-JP")}`;
+    const absValue = Math.abs(v);
+    return `￥${sign}${absValue.toLocaleString("ja-JP")}`;
   };
 
   const resetForm = (dateStr: string) => {
@@ -548,52 +579,49 @@ export function HomeCalendarPanel({ user }: HomeCalendarPanelProps) {
           </div>
         </div>
 
-        <div className="mt-4 h-64">
-          {happyStats.data.length === 0 ? (
-            <p className="text-sm text-zinc-500">データがありません</p>
-          ) : (
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={happyStats.data} stackOffset="sign">
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis
-                  dataKey="label"
-                  tickFormatter={(label) => {
-                    if (granularity === "day") {
-                      return label.replace(/-/g, "/");
-                    }
-                    if (granularity === "month") {
-                      return label.replace(/-/g, "/");
-                    }
-                    return label;
-                  }}
-                />
-                <YAxis hide domain={happyScaleDomain} />
-                <Tooltip
-                  formatter={(value) => formatYen(Number(value))}
-                  labelFormatter={(label) => {
-                    if (granularity === "day") {
-                      return new Date(`${label}T00:00:00`).toLocaleDateString("ja-JP", {
-                        month: "numeric",
-                        day: "numeric",
-                      });
-                    }
-                    if (granularity === "month") {
-                      const [y, m] = String(label).split("-");
-                      return `${Number(y)}年${Number(m)}月`;
-                    }
-                    return `${label}年`;
-                  }}
-                />
-                <ReferenceLine y={0} stroke="#0f172a" />
-                <Bar dataKey="positive" stackId="happy" fill={HAPPY_POSITIVE_COLOR} name="プラス">
-                  <LabelList dataKey="positive" content={renderPositiveLabel} />
-                </Bar>
-                <Bar dataKey="negative" stackId="happy" fill={HAPPY_NEGATIVE_COLOR} name="マイナス">
-                  <LabelList dataKey="negative" content={renderNegativeLabel} />
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          )}
+        <div className="mt-4 h-64 rounded" style={{ backgroundColor: "#fffaf3" }}>
+          <div className="h-full px-2 py-1">
+            {happyStats.data.length === 0 ? (
+              <p className="text-sm text-zinc-500">データがありません</p>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={happyStats.data}
+                  stackOffset="sign"
+                  style={{ pointerEvents: "none", userSelect: "none" }}
+                >
+                  <XAxis
+                    dataKey="label"
+                    tickFormatter={(label) => {
+                      if (granularity === "day") {
+                        return label.replace(/-/g, "/");
+                      }
+                      if (granularity === "month") {
+                        return label.replace(/-/g, "/");
+                      }
+                      return label;
+                    }}
+                  />
+                  <YAxis hide domain={happyScaleDomain} />
+                  <ReferenceLine y={0} stroke="#0f172a" />
+                  {todayInRange && (
+                    <ReferenceLine
+                      x={todayStr}
+                      stroke="#f97316"
+                      strokeDasharray="4 4"
+                      label={todayLabelProps}
+                    />
+                  )}
+                  <Bar dataKey="positive" stackId="happy" fill={HAPPY_POSITIVE_COLOR} name="プラス">
+                    <LabelList dataKey="positive" content={renderPositiveLabel} />
+                  </Bar>
+                  <Bar dataKey="negative" stackId="happy" fill={HAPPY_NEGATIVE_COLOR} name="マイナス">
+                    <LabelList dataKey="negative" content={renderNegativeLabel} />
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </div>
         </div>
       </div>
 
@@ -631,5 +659,3 @@ export function HomeCalendarPanel({ user }: HomeCalendarPanelProps) {
     </div>
   );
 }
-
-
