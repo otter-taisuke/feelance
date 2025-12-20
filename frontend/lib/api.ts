@@ -221,10 +221,12 @@ export async function saveDiary(
 export async function fetchDiaries(params?: {
   year?: number | null;
   month?: number | null;
+  tx_id?: string | null;
 }): Promise<DiaryEntry[]> {
   const searchParams = new URLSearchParams();
   if (params?.year) searchParams.set("year", String(params.year));
   if (params?.month) searchParams.set("month", String(params.month));
+  if (params?.tx_id) searchParams.set("tx_id", params.tx_id);
   const qs = searchParams.toString();
   const url = qs ? `${API_BASE}/diary?${qs}` : `${API_BASE}/diary`;
 

@@ -259,8 +259,12 @@ def save_diary(tx_id: str, diary_title: str, diary_body: str, user_id: str) -> d
         except Exception:
             tx_datetime = None
     df = read_diary()
+    # 同一ユーザー・同一トランザクションの既存日記は上書き
+    if not df.empty and "tx_id" in df.columns:
+        df = df[~((df["tx_id"] == tx_id) & (df["user_id"] == user_id))]
     new_row = {
         "id": str(uuid4()),
+        "tx_id": tx_id,
         "event_name": event.item,
         "diary_title": diary_title,
         "diary_body": diary_body,
@@ -281,6 +285,7 @@ def _row_to_entry(row) -> DiaryEntry:
 
     return DiaryEntry(
         id=row["id"],
+        tx_id=row.get("tx_id", "") or "",
         event_name=row["event_name"],
         diary_title=row["diary_title"],
         diary_body=row["diary_body"],
@@ -290,11 +295,15 @@ def _row_to_entry(row) -> DiaryEntry:
     )
 
 
-def list_diaries(user_id: str, year: Optional[int] = None, month: Optional[int] = None) -> List[DiaryEntry]:
+def list_diaries(
+    user_id: str, year: Optional[int] = None, month: Optional[int] = None, tx_id: Optional[str] = None
+) -> List[DiaryEntry]:
     df = read_diary()
     if df.empty:
         return []
     df = df[df["user_id"] == user_id].copy()
+    if tx_id:
+        df = df[df["tx_id"] == tx_id]
 
     # transaction_dateを優先し、なければcreated_atを基準日として使う
     df["effective_date"] = df["transaction_date"].fillna(df["created_at"])

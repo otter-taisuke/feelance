@@ -44,6 +44,7 @@ def save(payload: SaveDiaryRequest, request: Request) -> SaveDiaryResponse:
     saved = save_diary(payload.tx_id, payload.diary_title, payload.diary_body, user.user_id)
     return SaveDiaryResponse(
         id=saved["id"],
+        tx_id=saved["tx_id"],
         event_name=saved["event_name"],
         diary_title=saved["diary_title"],
         diary_body=saved["diary_body"],
@@ -58,7 +59,8 @@ def list_diary(
     request: Request,
     year: Optional[int] = None,
     month: Optional[int] = None,
+    tx_id: Optional[str] = None,
 ) -> List[DiaryEntry]:
     user = _get_user_from_cookie(request)
-    return list_diaries(user.user_id, year=year, month=month)
+    return list_diaries(user.user_id, year=year, month=month, tx_id=tx_id)
 
