@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 
 import { HappyChan } from "@/components/common/HappyChan";
@@ -61,6 +62,7 @@ export function RetrospectivePanel({ user, months = 12 }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [diaryModal, setDiaryModal] = useState<DiaryModal | null>(null);
   const [fetchingDiaryId, setFetchingDiaryId] = useState<string | null>(null);
+  const router = useRouter();
 
   useEffect(() => {
     const run = async () => {
@@ -185,6 +187,14 @@ export function RetrospectivePanel({ user, months = 12 }: Props) {
             disabled={fetchingDiaryId === event.event_id}
           >
             日記を読む
+          </button>
+        )}
+        {!event.has_diary && (
+          <button
+            className="rounded bg-emerald-600 px-3 py-1 text-xs font-semibold text-white shadow-sm hover:bg-emerald-700"
+            onClick={() => router.push(`/diary/create?tx_id=${event.event_id}`)}
+          >
+            日記を作成
           </button>
         )}
       </div>
