@@ -1,9 +1,9 @@
 {
   "moods": [
-    { "value": -2, "label": "とてもネガティブ (-2)", "short_label": "とてもネガティブ" },
-    { "value": -1, "label": "ややネガティブ (-1)", "short_label": "ややネガティブ" },
-    { "value": 0, "label": "ニュートラル (0)", "short_label": "ニュートラル" },
-    { "value": 1, "label": "ややポジティブ (+1)", "short_label": "ややポジティブ" },
+    { "value": -2, "label": "最悪", "short_label": "最悪" },
+    { "value": -1, "label": "やや悪", "short_label": "やや悪" },
+    { "value": 0, "label": "普通", "short_label": "普通" },
+    { "value": 1, "label": "やや良", "short_label": "やや良" },
     { "value": 2, "label": "最高", "short_label": "最高" }
   ],
   "default_label": "不明",
