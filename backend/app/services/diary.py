@@ -33,21 +33,6 @@ def _ensure_client() -> OpenAI:
     return client
 
 
-def _build_system_prompt(event: dict) -> str:
-    mood_label = get_mood_label(event.get("mood_score"))
-    return (
-        "あなたはユーザーの日記作成を支援するアシスタントです。\n"
-        "以下のイベント情報を踏まえ、あなたが主体となって質問を投げかけ、ユーザーから詳細を引き出してください。\n"
-        "各ターンは必ず質問で終わり、ユーザーの回答を待って次の質問をする流れにしてください（ユーザーからの質問には回答せず、会話を主導する）。\n"
-        "最終的には日記タイトルと本文を組み立てやすい情報を集めます。\n"
-        f"- 日付: {event['date']}\n"
-        f"- イベント名: {event['item']}\n"
-        f"- 金額: {event['amount']} 円\n"
-        f"- 感情: {mood_label}\n"
-        f"- Happy Money: {event['happy_amount']} 円\n"
-    )
-
-
 def _log_debug(hypothesis_id: str, location: str, message: str, data: dict) -> None:
     payload = {
         "sessionId": SESSION_ID,
@@ -116,7 +101,18 @@ def _build_conversation_history_text(event, messages: Iterable[ChatMessage]) -> 
 
 def stream_chat(tx_id: str, messages: List[ChatMessage], user_id: str) -> Generator[str, None, None]:
     event = get_transaction(tx_id)
-    system_prompt = _build_system_prompt(event.model_dump())
+    mood_label = get_mood_label(event.get("mood_score"))
+    system_prompt = (
+        "あなたはユーザーの日記作成を支援するアシスタントです。\n"
+        "以下のイベント情報を踏まえ、あなたが主体となって質問を投げかけ、ユーザーから詳細を引き出してください。\n"
+        "各ターンは必ず質問で終わり、ユーザーの回答を待って次の質問をする流れにしてください（ユーザーからの質問には回答せず、会話を主導する）。\n"
+        "最終的には日記タイトルと本文を組み立てやすい情報を集めます。\n"
+        f"- 日付: {event['date']}\n"
+        f"- イベント名: {event['item']}\n"
+        f"- 金額: {event['amount']} 円\n"
+        f"- 感情: {mood_label}\n"
+        f"- Happy Money: {event['happy_amount']} 円\n"
+    )
     formatted_messages = _format_messages(system_prompt, messages)
     assistant_chunks: List[str] = []
     try:
