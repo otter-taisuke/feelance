@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { AppHeader } from "@/components/layout/AppHeader";
+import { HappyChan } from "@/components/common/HappyChan";
 import {
   generateDiary,
   getTransaction,
@@ -400,15 +401,23 @@ export default function CreateDiaryPage() {
             <div className="flex h-96 flex-col gap-2 rounded border border-zinc-200 bg-zinc-50 p-3 overflow-x-hidden">
               <div ref={chatContainerRef} className="flex-1 space-y-3 overflow-y-auto overflow-x-hidden">
                 {chat.messages.length === 0 && !chat.streamingAssistant && (
-                  <p className="text-sm text-zinc-500">
-                    {historyLoading ? "前回のチャットを読み込み中..." : "質問を入力してAIに聞いてみましょう。"}
-                  </p>
+                  <div className="flex flex-col items-center justify-center gap-2 py-8">
+                    <HappyChan size="medium" variant="happy" />
+                    <p className="text-sm text-zinc-500">
+                      {historyLoading ? "前回のチャットを読み込み中..." : "質問を入力してハッピーちゃんに聞いてみましょう。"}
+                    </p>
+                  </div>
                 )}
                 {chat.messages.map((m, idx) => (
                   <div
                     key={idx}
-                    className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
+                    className={`flex ${m.role === "user" ? "justify-end" : "justify-start"} gap-2`}
                   >
+                    {m.role === "assistant" && (
+                      <div className="flex-shrink-0">
+                        <HappyChan size="small" variant="happy" />
+                      </div>
+                    )}
                     <div
                       className={`relative max-w-[80%] rounded-lg p-3 shadow-sm ${
                         m.role === "user"
@@ -438,9 +447,12 @@ export default function CreateDiaryPage() {
                   </div>
                 ))}
                 {chat.streamingAssistant !== null && (
-                  <div className="flex justify-start">
+                  <div className="flex justify-start gap-2">
+                    <div className="flex-shrink-0">
+                      <HappyChan size="small" variant="happy" />
+                    </div>
                     <div className="relative max-w-[80%] rounded-lg bg-gray-100 p-3 shadow-sm text-zinc-900">
-                      <div className="mb-1 text-xs font-semibold text-zinc-500">AI (生成中)</div>
+                      <div className="mb-1 text-xs font-semibold text-zinc-500">ハッピーちゃん (入力中...)</div>
                       <div className="whitespace-pre-wrap break-words text-sm">
                         {chat.streamingAssistant || "…"}
                       </div>
