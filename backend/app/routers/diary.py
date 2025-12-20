@@ -5,6 +5,7 @@ from fastapi.responses import StreamingResponse
 
 from app.routers.auth import _get_user_from_cookie
 from app.schemas.diary import (
+    ChatHistoryResponse,
     ChatStreamRequest,
     DiaryEntry,
     GenerateDiaryRequest,
@@ -12,7 +13,7 @@ from app.schemas.diary import (
     SaveDiaryRequest,
     SaveDiaryResponse,
 )
-from app.services.diary import generate_diary, list_diaries, save_diary, stream_chat
+from app.services.diary import generate_diary, get_chat_history, list_diaries, save_diary, stream_chat
 
 router = APIRouter(prefix="/diary", tags=["diary"])
 
@@ -63,4 +64,11 @@ def list_diary(
 ) -> List[DiaryEntry]:
     user = _get_user_from_cookie(request)
     return list_diaries(user.user_id, year=year, month=month, tx_id=tx_id)
+
+
+@router.get("/chat", response_model=ChatHistoryResponse)
+def get_chat(tx_id: str, request: Request) -> ChatHistoryResponse:
+    user = _get_user_from_cookie(request)
+    messages = get_chat_history(tx_id, user.user_id)
+    return ChatHistoryResponse(messages=messages)
 

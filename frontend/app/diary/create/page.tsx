@@ -9,6 +9,7 @@ import {
   getTransaction,
   saveDiary,
   fetchDiaries,
+  fetchDiaryChat,
   streamDiaryChat,
 } from "@/lib/api";
 import { moodOptions, getMoodLabel } from "@/lib/mood";
@@ -48,7 +49,8 @@ export default function CreateDiaryPage() {
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [initialAsked, setInitialAsked] = useState(false);
-  const [storageLoaded, setStorageLoaded] = useState(false);
+  const [historyLoading, setHistoryLoading] = useState(true);
+  const [historyError, setHistoryError] = useState<string | null>(null);
   const [existingDiary, setExistingDiary] = useState<DiaryEntry | null>(null);
   const [existingDiaryLoading, setExistingDiaryLoading] = useState(false);
   const [existingDiaryError, setExistingDiaryError] = useState<string | null>(null);
@@ -88,6 +90,35 @@ export default function CreateDiaryPage() {
       }
     };
     run();
+  }, [txId]);
+
+  useEffect(() => {
+    if (!txId) {
+      setHistoryLoading(false);
+      return;
+    }
+    const loadHistory = async () => {
+      setHistoryLoading(true);
+      setHistoryError(null);
+      try {
+        const res = await fetchDiaryChat(txId);
+        const msgs = res?.messages ?? [];
+        if (msgs.length > 0) {
+          setChat({
+            messages: msgs,
+            streamingAssistant: null,
+            streaming: false,
+            error: null,
+          });
+          setInitialAsked(true);
+        }
+      } catch (e) {
+        setHistoryError((e as Error).message);
+      } finally {
+        setHistoryLoading(false);
+      }
+    };
+    void loadHistory();
   }, [txId]);
 
   const eventSummary = useMemo(() => {
@@ -235,79 +266,26 @@ export default function CreateDiaryPage() {
     }
   };
 
-  const storageKey = txId ? `diary-chat:${txId}` : null;
-
   useEffect(() => {
-    if (!storageKey) {
-      setStorageLoaded(true);
-      return;
-    }
-    try {
-      const raw = localStorage.getItem(storageKey);
-      if (!raw) {
-        setStorageLoaded(true);
-        return;
-      }
-      const parsed = JSON.parse(raw) as {
-        messages?: ChatMessage[];
-        diary_title?: string;
-        diary_body?: string;
-      };
-      setChat((prev) => ({
-        ...prev,
-        messages: parsed.messages ?? [],
-      }));
-      if (parsed.diary_title) setDiaryTitle(parsed.diary_title);
-      if (parsed.diary_body) setDiaryBody(parsed.diary_body);
-      if (
-        (parsed.messages && parsed.messages.length > 0) ||
-        parsed.diary_title ||
-        parsed.diary_body
-      ) {
-        setInitialAsked(true);
-      }
-      setStorageLoaded(true);
-    } catch {
-      // ignore corrupted data
-      setStorageLoaded(true);
-    }
-  }, [storageKey]);
-
-  useEffect(() => {
-    if (!storageLoaded) return;
     if (!existingDiary) return;
     if (!diaryTitle && !diaryBody) {
       setDiaryTitle(existingDiary.diary_title || "");
       setDiaryBody(existingDiary.diary_body || "");
     }
-  }, [storageLoaded, existingDiary, diaryTitle, diaryBody]);
+  }, [existingDiary, diaryTitle, diaryBody]);
 
   useEffect(() => {
-    if (transaction && txId && storageLoaded && !initialAsked && chat.messages.length === 0 && !chat.streaming) {
+    if (transaction && txId && !historyLoading && !initialAsked && chat.messages.length === 0 && !chat.streaming) {
       void askInitialQuestion();
     }
-  }, [transaction, txId, storageLoaded, initialAsked, chat.messages.length, chat.streaming]);
-
-  useEffect(() => {
-    if (!storageKey) return;
-    const data = {
-      messages: chat.messages,
-      diary_title: diaryTitle,
-      diary_body: diaryBody,
-    };
-    try {
-      localStorage.setItem(storageKey, JSON.stringify(data));
-    } catch {
-      // ignore
-    }
-  }, [storageKey, chat.messages, diaryTitle, diaryBody]);
+  }, [transaction, txId, historyLoading, initialAsked, chat.messages.length, chat.streaming]);
 
   // チャットの自動スクロール
   useEffect(() => {
     if (chatContainerRef.current) {
       chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
     }
-  }, [chat.messages, chat.streamingAssistant]);
+  }, [chat.messages, chat.streamingAssistant, historyLoading]);
 
   if (!txId) {
     return (
@@ -419,10 +397,12 @@ export default function CreateDiaryPage() {
             <div className="mb-2">
               <h2 className="text-lg font-semibold">チャット</h2>
             </div>
-            <div className="flex h-96 flex-col gap-2 rounded border border-zinc-200 bg-zinc-50 p-3">
-              <div ref={chatContainerRef} className="flex-1 space-y-3 overflow-y-auto">
+            <div className="flex h-96 flex-col gap-2 rounded border border-zinc-200 bg-zinc-50 p-3 overflow-x-hidden">
+              <div ref={chatContainerRef} className="flex-1 space-y-3 overflow-y-auto overflow-x-hidden">
                 {chat.messages.length === 0 && !chat.streamingAssistant && (
-                  <p className="text-sm text-zinc-500">質問を入力してAIに聞いてみましょう。</p>
+                  <p className="text-sm text-zinc-500">
+                    {historyLoading ? "前回のチャットを読み込み中..." : "質問を入力してAIに聞いてみましょう。"}
+                  </p>
                 )}
                 {chat.messages.map((m, idx) => (
                   <div
@@ -436,7 +416,7 @@ export default function CreateDiaryPage() {
                           : "bg-gray-100 text-zinc-900"
                       }`}
                     >
-                      <div className="whitespace-pre-wrap text-sm">{m.content}</div>
+                      <div className="whitespace-pre-wrap break-words text-sm">{m.content}</div>
                       {/* 吹き出しの三角形 */}
                       <div
                         className={`absolute bottom-0 ${
@@ -461,7 +441,7 @@ export default function CreateDiaryPage() {
                   <div className="flex justify-start">
                     <div className="relative max-w-[80%] rounded-lg bg-gray-100 p-3 shadow-sm text-zinc-900">
                       <div className="mb-1 text-xs font-semibold text-zinc-500">AI (生成中)</div>
-                      <div className="whitespace-pre-wrap text-sm">
+                      <div className="whitespace-pre-wrap break-words text-sm">
                         {chat.streamingAssistant || "…"}
                       </div>
                       {/* 吹き出しの三角形 */}
@@ -480,6 +460,7 @@ export default function CreateDiaryPage() {
                 )}
               </div>
               {chat.error && <p className="text-sm text-red-600">{chat.error}</p>}
+              {historyError && <p className="text-xs text-red-600">履歴の読み込みに失敗しました: {historyError}</p>}
               <div className="flex items-center gap-2">
                 <input
                   className="flex-1 rounded border border-zinc-300 p-2 text-sm"
