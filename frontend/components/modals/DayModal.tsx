@@ -20,6 +20,7 @@ type Props = {
   onSelectTx: (tx: Transaction) => void;
   onDiaryExisting?: () => void;
   onClose: () => void;
+  startInEventList: boolean;
   formatYen: (v: number) => string;
 };
 
@@ -38,25 +39,31 @@ export function DayModal({
   onSelectTx,
   onDiaryExisting,
   onClose,
+  startInEventList,
   formatYen,
 }: Props) {
   const [showEditModal, setShowEditModal] = useState(false);
-  const [showEventList, setShowEventList] = useState(false);
+  const [showEventList, setShowEventList] = useState(startInEventList);
 
-  // フォームが変更されたら編集モーダルの表示状態をリセット
+  useEffect(() => {
+    if (open) {
+      setShowEventList(startInEventList);
+    }
+  }, [open, startInEventList]);
+
   useEffect(() => {
     if (!form.id) {
       setShowEditModal(false);
-      setShowEventList(false);
     }
   }, [form.id]);
 
-  // モーダルが開かれた時にイベント一覧表示をリセット
-  useEffect(() => {
-    if (open && !form.id) {
-      setShowEventList(false);
-    }
-  }, [open, form.id]);
+  const handleShowEventList = () => setShowEventList(true);
+
+  const handleAddNew = () => {
+    onNew();
+    setShowEventList(false);
+    setShowEditModal(false);
+  };
 
   if (!open) return null;
 
@@ -70,6 +77,11 @@ export function DayModal({
     const weekday = weekdays[date.getDay()];
     return `${year}/${month}/${day}（${weekday}）`;
   };
+
+  const hasSelection = Boolean(form.id);
+  const editDisabled = !hasSelection;
+  const diaryDisabled = !hasSelection || !onDiaryExisting || saving;
+  const pressableClass = "transition active:translate-y-[1px] active:scale-[0.99]";
 
   return (
     <div
@@ -95,86 +107,22 @@ export function DayModal({
           </button>
         </div>
 
-        {form.id ? (
-          // 編集モード時：右側のイベントリストのみ表示
-          <div className="mt-4" onClick={() => onNew()}>
+        {showEventList ? (
+          // イベント一覧を表示
+          <div className="mt-4 space-y-4">
             <div className="space-y-3">
               <div className="space-y-3">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <h4 className="text-sm font-semibold text-zinc-700">この日のイベント</h4>
-                  <span className="text-xs text-zinc-500">{dayTransactions.length}件</span>
-                </div>
-                <div
-                  className="max-h-80 space-y-2 overflow-y-auto rounded border border-zinc-200 p-2"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  {dayTransactions.length === 0 && (
-                    <p className="text-sm text-zinc-500">まだ登録がありません</p>
-                  )}
-                  {dayTransactions.map((tx) => {
-                    const isSelected = form.id === tx.id;
-                    // ハッピーマネーの値に応じてスタイルを決定
-                    const getHappyMoneyStyle = () => {
-                      if (tx.happy_amount > 0) {
-                        // プラス：選択時はより濃い青
-                        return isSelected ? "border-blue-600 bg-blue-100" : "border-blue-500 bg-blue-50";
-                      } else if (tx.happy_amount < 0) {
-                        // マイナス：選択時はより濃い赤
-                        return isSelected ? "border-red-600 bg-red-100" : "border-red-500 bg-red-50";
-                      } else {
-                        // 0：選択時はより濃い灰色
-                        return isSelected ? "border-gray-700 bg-gray-200" : "border-black bg-gray-100";
-                      }
-                    };
-                    return (
-                      <button
-                        key={tx.id}
-                        className={`w-full cursor-pointer rounded p-2 text-left transition ${
-                          isSelected ? "border-2" : "border"
-                        } ${getHappyMoneyStyle()}`}
-                        onClick={() => onSelectTx(tx)}
-                      >
-                      <div className="flex items-center justify-between">
-                        <span className="font-medium">{tx.item}</span>
-                        <div className="flex flex-col items-end">
-                          <span className="text-sm text-zinc-600 whitespace-nowrap">
-                            {tx.happy_amount >= 0 ? "+" : ""}{tx.happy_amount.toLocaleString("ja-JP")}
-                          </span>
-                          <span className="text-xs text-zinc-500">{formatYen(tx.amount)}</span>
-                        </div>
-                      </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-zinc-500">{dayTransactions.length}件</span>
+                    <button
+                      className={`rounded bg-black px-3 py-2 text-xs font-semibold text-white shadow-sm hover:bg-zinc-800 ${pressableClass}`}
+                      onClick={handleAddNew}
+                    >
+                      追加する
                     </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-            <div className="mt-4 flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-              <button
-                className="rounded bg-black px-4 py-2 text-sm text-white hover:bg-zinc-800"
-                onClick={() => setShowEditModal(true)}
-              >
-                編集する
-              </button>
-              {onDiaryExisting && (
-                <button
-                  className="rounded bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
-                  onClick={onDiaryExisting}
-                  disabled={saving}
-                >
-                  日記作成
-                </button>
-              )}
-            </div>
-          </div>
-        ) : showEventList ? (
-          // 新規作成時：イベント一覧を表示
-          <div className="mt-4">
-            <div className="space-y-3">
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <h4 className="text-sm font-semibold text-zinc-700">この日のイベント</h4>
-                  <span className="text-xs text-zinc-500">{dayTransactions.length}件</span>
+                  </div>
                 </div>
                 <div className="max-h-80 space-y-2 overflow-y-auto rounded border border-zinc-200 p-2">
                   {dayTransactions.length === 0 && (
@@ -218,6 +166,36 @@ export function DayModal({
                 </div>
               </div>
             </div>
+
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div className="text-sm text-zinc-600">
+                {hasSelection ? "選択中のイベントを操作できます" : "イベントを選択すると操作ボタンが有効になります"}
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  className={`rounded px-4 py-2 text-sm font-semibold ${pressableClass} ${
+                    editDisabled
+                      ? "cursor-not-allowed bg-zinc-200 text-zinc-400"
+                      : "bg-black text-white shadow-sm hover:bg-zinc-800"
+                  }`}
+                  onClick={() => setShowEditModal(true)}
+                  disabled={editDisabled}
+                >
+                  編集する
+                </button>
+                <button
+                  className={`rounded px-4 py-2 text-sm font-semibold ${pressableClass} ${
+                    diaryDisabled
+                      ? "cursor-not-allowed bg-zinc-200 text-zinc-400"
+                      : "bg-emerald-600 text-white shadow-sm hover:bg-emerald-700"
+                  }`}
+                  onClick={() => onDiaryExisting?.()}
+                  disabled={diaryDisabled}
+                >
+                  日記作成
+                </button>
+              </div>
+            </div>
           </div>
         ) : (
           // 新規作成時：記入画面のみ表示
@@ -227,9 +205,9 @@ export function DayModal({
               moodOptions={moodOptions}
               onChange={onChangeForm}
               onSave={onSave}
-              onNew={onNew}
+              onNew={handleAddNew}
               onDelete={onDelete}
-              onClose={() => setShowEventList(true)}
+              onClose={handleShowEventList}
               saving={saving}
               error={error}
             />
