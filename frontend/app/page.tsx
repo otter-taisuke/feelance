@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import { LoginPanel } from "@/components/auth/LoginPanel";
 import { DiaryListPanel } from "@/components/diary/DiaryListPanel";
@@ -17,6 +18,8 @@ export default function Home() {
   const [authLoading, setAuthLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabKey>("calendar");
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
   useEffect(() => {
     const restoreLogin = async () => {
@@ -32,6 +35,15 @@ export default function Home() {
     };
     restoreLogin();
   }, []);
+
+  useEffect(() => {
+    const tabParam = searchParams.get("tab");
+    if (tabParam === "diary") {
+      setActiveTab("diary");
+    } else if (tabParam === "calendar") {
+      setActiveTab("calendar");
+    }
+  }, [searchParams]);
 
   const handleLogin = async () => {
     setError(null);
@@ -88,7 +100,10 @@ export default function Home() {
                       ? "bg-black text-white"
                       : "bg-white text-zinc-700 hover:bg-zinc-100"
                   }`}
-                  onClick={() => setActiveTab(key)}
+                  onClick={() => {
+                    setActiveTab(key);
+                    router.push(`/?tab=${key}`);
+                  }}
                 >
                   {key === "calendar" ? "カレンダー" : "日記一覧"}
                 </button>

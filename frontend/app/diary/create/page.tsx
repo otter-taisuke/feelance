@@ -228,7 +228,7 @@ export default function CreateDiaryPage() {
     setNotice(null);
     try {
       await saveDiary(txId, diaryTitle.trim(), diaryBody.trim());
-      router.push("/diary");
+      router.push("/?tab=diary");
     } catch (e) {
       setNotice((e as Error).message || "保存に失敗しました");
       setSaving(false);
