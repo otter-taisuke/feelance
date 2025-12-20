@@ -91,5 +91,10 @@ export type RetrospectiveSummary = {
   yearly_happy_money_top3: RetrospectiveEvent[];
   yearly_happy_money_worst3: RetrospectiveEvent[];
   emotion_buckets: EmotionBucket[];
+  summary_text: string;
+  diary_top_insufficient: boolean;
+  diary_worst_insufficient: boolean;
+  event_top_insufficient: boolean;
+  event_worst_insufficient: boolean;
 };
 

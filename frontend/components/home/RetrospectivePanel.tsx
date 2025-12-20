@@ -75,14 +75,7 @@ export function RetrospectivePanel({ user, months = 12 }: Props) {
 
   const happySummaryText = useMemo(() => {
     if (!summary) return "";
-    const top = summary.happy_money_top3_diaries[0];
-    const worst = summary.happy_money_worst3_diaries[0];
-    if (!top && !worst) return "まだ日記付きのイベントがありません。";
-    if (top && worst) {
-      return `一番ハッピーだったのは「${top.title}」(${formatSigned(Math.trunc(top.amount))})、一番しょんぼりは「${worst.title}」(${formatSigned(Math.trunc(worst.amount))}) でしたっピィ。`;
-    }
-    if (top) return `ハッピーマネーが大きかったのは「${top.title}」(${formatSigned(Math.trunc(top.amount))}) でしたっピィ。`;
-    return `しょんぼりが大きかったのは「${worst!.title}」(${formatSigned(Math.trunc(worst!.amount))}) でしたっピィ。`;
+    return summary.summary_text || "まだ日記付きのイベントがありませんっピィ。";
   }, [summary]);
 
   const openDiary = async (event: RetrospectiveEvent) => {
@@ -194,7 +187,11 @@ export function RetrospectivePanel({ user, months = 12 }: Props) {
                 {summary.happy_money_top3_diaries.map(renderDiaryCard)}
               </div>
             ) : (
-              <p className="text-sm text-zinc-500">まだデータがありません</p>
+              <p className="text-sm text-zinc-500">
+                {summary?.diary_top_insufficient
+                  ? "ポジティブな日記がまだ足りないっピィ。"
+                  : "まだデータがありません"}
+              </p>
             )}
           </div>
           <div>
@@ -204,7 +201,11 @@ export function RetrospectivePanel({ user, months = 12 }: Props) {
                 {summary.happy_money_worst3_diaries.map(renderDiaryCard)}
               </div>
             ) : (
-              <p className="text-sm text-zinc-500">まだデータがありません</p>
+              <p className="text-sm text-zinc-500">
+                {summary?.diary_worst_insufficient
+                  ? "ネガティブな日記がまだ足りないっピィ。"
+                  : "まだデータがありません"}
+              </p>
             )}
           </div>
         </div>
@@ -221,7 +222,11 @@ export function RetrospectivePanel({ user, months = 12 }: Props) {
             {summary?.yearly_happy_money_top3?.length ? (
               summary.yearly_happy_money_top3.map(renderEventItem)
             ) : (
-              <p className="text-sm text-zinc-500">データがありません</p>
+              <p className="text-sm text-zinc-500">
+                {summary?.event_top_insufficient
+                  ? "ポジティブなイベントがまだ足りないっピィ。"
+                  : "データがありません"}
+              </p>
             )}
           </div>
           <div className="space-y-2">
@@ -229,7 +234,11 @@ export function RetrospectivePanel({ user, months = 12 }: Props) {
             {summary?.yearly_happy_money_worst3?.length ? (
               summary.yearly_happy_money_worst3.map(renderEventItem)
             ) : (
-              <p className="text-sm text-zinc-500">データがありません</p>
+              <p className="text-sm text-zinc-500">
+                {summary?.event_worst_insufficient
+                  ? "ネガティブなイベントがまだ足りないっピィ。"
+                  : "データがありません"}
+              </p>
             )}
           </div>
         </div>
@@ -253,13 +262,13 @@ export function RetrospectivePanel({ user, months = 12 }: Props) {
                   cx="50%"
                   cy="50%"
                   outerRadius={100}
-                  label={(entry) => `${entry.label}: ${entry.count}`}
+                  label={(entry: any) => `${entry.label}: ${entry.count}`}
                 >
                   {emotionData.map((entry) => (
                     <Cell key={entry.label} fill={BUCKET_COLORS[entry.label] ?? "#cbd5e1"} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(value: number) => `${value}件`} />
+                <Tooltip formatter={(value: number | string | undefined) => `${value ?? 0}件`} />
                 <Legend />
               </PieChart>
             </ResponsiveContainer>
