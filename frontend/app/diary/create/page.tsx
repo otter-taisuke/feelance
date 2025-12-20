@@ -8,10 +8,11 @@ import {
   generateDiary,
   getTransaction,
   saveDiary,
+  fetchDiaries,
   streamDiaryChat,
 } from "@/lib/api";
 import { moodOptions, getMoodLabel } from "@/lib/mood";
-import type { ChatMessage, Transaction } from "@/lib/types";
+import type { ChatMessage, DiaryEntry, Transaction } from "@/lib/types";
 
 type ChatState = {
   messages: ChatMessage[];
@@ -48,6 +49,10 @@ export default function CreateDiaryPage() {
   const [notice, setNotice] = useState<string | null>(null);
   const [initialAsked, setInitialAsked] = useState(false);
   const [storageLoaded, setStorageLoaded] = useState(false);
+  const [existingDiary, setExistingDiary] = useState<DiaryEntry | null>(null);
+  const [existingDiaryLoading, setExistingDiaryLoading] = useState(false);
+  const [existingDiaryError, setExistingDiaryError] = useState<string | null>(null);
+  const hasExistingDiary = Boolean(existingDiary);
 
   useEffect(() => {
     if (!txId) return;
@@ -65,6 +70,24 @@ export default function CreateDiaryPage() {
       }
     };
     fetchTx();
+  }, [txId]);
+
+  useEffect(() => {
+    if (!txId) return;
+    const run = async () => {
+      setExistingDiaryLoading(true);
+      setExistingDiaryError(null);
+      try {
+        const res = await fetchDiaries({ tx_id: txId });
+        setExistingDiary(res[0] ?? null);
+      } catch (e) {
+        setExistingDiary(null);
+        setExistingDiaryError((e as Error).message);
+      } finally {
+        setExistingDiaryLoading(false);
+      }
+    };
+    run();
   }, [txId]);
 
   const eventSummary = useMemo(() => {
@@ -197,6 +220,10 @@ export default function CreateDiaryPage() {
       setNotice("まず日記を生成してください");
       return;
     }
+    if (hasExistingDiary) {
+      const confirmed = window.confirm("このイベントには既存の日記があります。上書きしますか？");
+      if (!confirmed) return;
+    }
     setSaving(true);
     setNotice(null);
     try {
@@ -245,6 +272,15 @@ export default function CreateDiaryPage() {
       setStorageLoaded(true);
     }
   }, [storageKey]);
+
+  useEffect(() => {
+    if (!storageLoaded) return;
+    if (!existingDiary) return;
+    if (!diaryTitle && !diaryBody) {
+      setDiaryTitle(existingDiary.diary_title || "");
+      setDiaryBody(existingDiary.diary_body || "");
+    }
+  }, [storageLoaded, existingDiary, diaryTitle, diaryBody]);
 
   useEffect(() => {
     if (transaction && txId && storageLoaded && !initialAsked && chat.messages.length === 0 && !chat.streaming) {
@@ -298,6 +334,11 @@ export default function CreateDiaryPage() {
               選択されたイベントをもとにAIと対話し、日記を作成します。
             </p>
             <h2 className="text-lg font-semibold">選択されたイベント</h2>
+            {hasExistingDiary && (
+              <div className="mt-1 inline-flex items-center gap-2 rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-800">
+                このイベントには既存の日記があります（保存すると上書き）
+              </div>
+            )}
           </div>
           {loadingTx && <p className="text-sm text-zinc-500">読み込み中...</p>}
           {txError && <p className="text-sm text-red-600">{txError}</p>}
@@ -346,6 +387,28 @@ export default function CreateDiaryPage() {
                     </div>
                   </div>
                 </div>
+                {existingDiaryLoading && (
+                  <p className="mt-2 text-xs text-zinc-500">既存の日記を確認しています...</p>
+                )}
+                {existingDiaryError && (
+                  <p className="mt-2 text-xs text-red-600">{existingDiaryError}</p>
+                )}
+                {existingDiary && (
+                  <div className="mt-3 rounded border border-amber-200 bg-amber-50 p-3 text-amber-900">
+                    <p className="text-sm font-semibold">このイベントには既に日記が保存されています。</p>
+                    <p className="text-xs text-amber-700">「保存する」を押すと既存の日記が上書きされます。</p>
+                    <div className="mt-2 space-y-2 rounded border border-amber-200 bg-white/70 p-2 text-sm text-amber-900">
+                      <div>
+                        <div className="text-xs font-semibold text-amber-700">既存タイトル</div>
+                        <div className="whitespace-pre-wrap">{existingDiary.diary_title || "タイトルなし"}</div>
+                      </div>
+                      <div>
+                        <div className="text-xs font-semibold text-amber-700">既存本文</div>
+                        <div className="whitespace-pre-wrap">{existingDiary.diary_body || "本文なし"}</div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })()}

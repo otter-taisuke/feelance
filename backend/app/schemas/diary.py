@@ -34,6 +34,7 @@ class SaveDiaryRequest(BaseModel):
 
 class SaveDiaryResponse(BaseModel):
     id: str
+    tx_id: str
     event_name: str
     diary_title: str
     diary_body: str
@@ -44,6 +45,7 @@ class SaveDiaryResponse(BaseModel):
 
 class DiaryEntry(BaseModel):
     id: str
+    tx_id: str
     event_name: str
     diary_title: str
     diary_body: str

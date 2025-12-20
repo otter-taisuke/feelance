@@ -40,6 +40,7 @@ export type DiaryGenerateResponse = {
 
 export type SaveDiaryResponse = {
   id: string;
+  tx_id: string;
   event_name: string;
   diary_title: string;
   diary_body: string;
@@ -50,6 +51,7 @@ export type SaveDiaryResponse = {
 
 export type DiaryEntry = {
   id: string;
+  tx_id: string;
   event_name: string;
   diary_title: string;
   diary_body: string;

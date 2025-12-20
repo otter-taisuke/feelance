@@ -23,11 +23,6 @@ const formatDateLabel = (iso?: string | null) => {
 const formatMonthLabel = (d: Date) =>
   d.toLocaleDateString("ja-JP", { year: "numeric", month: "long" });
 
-const truncate = (text: string, limit = 180) => {
-  if (!text) return "";
-  return text.length > limit ? `${text.slice(0, limit)}...` : text;
-};
-
 export function DiaryListPanel({ variant = "standalone", user: externalUser = null }: DiaryListPanelProps) {
   const useExternalAuth = variant === "embedded";
 
@@ -48,6 +43,8 @@ export function DiaryListPanel({ variant = "standalone", user: externalUser = nu
   const [diaries, setDiaries] = useState<DiaryEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedDiary, setSelectedDiary] = useState<DiaryEntry | null>(null);
+
+  const closeModal = () => setSelectedDiary(null);
 
   const currentYear = viewDate.getFullYear();
   const currentMonth = viewDate.getMonth() + 1;
@@ -282,27 +279,29 @@ export function DiaryListPanel({ variant = "standalone", user: externalUser = nu
               この月の日記はまだありません
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 auto-rows-[340px]">
               {filteredDiaries.map((d) => (
                 <button
                   key={d.id}
-                  className="group flex aspect-square flex-col rounded-lg border border-zinc-200 bg-white text-left shadow-sm transition hover:-translate-y-1 hover:shadow-md"
+                  className="group flex h-full flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white text-left shadow-sm transition hover:-translate-y-1 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-black/10"
                   onClick={() => setSelectedDiary(d)}
                 >
-                  <div className="flex items-center justify-between rounded-md bg-[#f5ede3] px-2 py-1 text-xs text-zinc-700">
+                  <div className="flex items-center justify-between rounded-t-xl bg-[#f5ede3] px-3 py-2 text-xs text-zinc-700">
                     <span>{formatDateLabel(d.transaction_date || d.created_at)}</span>
                     <span className="rounded-full border border-zinc-300 bg-white/80 px-2 py-0.5 text-[11px] text-zinc-600">
                       {d.event_name || "イベント"}
                     </span>
                   </div>
-                  <h3 className="mt-3 line-clamp-2 text-lg font-semibold text-zinc-900">
-                    {d.diary_title || d.event_name || "タイトルなし"}
-                  </h3>
-                  <p className="mt-2 flex-1 text-sm text-zinc-700">
-                    {truncate(d.diary_body || "")}
-                  </p>
-                  <div className="mt-3 text-right text-xs text-zinc-500">
-                    作成: {formatDateLabel(d.created_at)}
+                  <div className="flex flex-1 flex-col px-4 py-3">
+                    <h3 className="line-clamp-2 text-lg font-semibold text-zinc-900">
+                      {d.diary_title || d.event_name || "タイトルなし"}
+                    </h3>
+                    <p className="mt-2 flex-1 text-sm text-zinc-700 line-clamp-4">
+                      {d.diary_body || ""}
+                    </p>
+                    <div className="mt-3 text-right text-xs text-zinc-500">
+                      作成: {formatDateLabel(d.created_at)}
+                    </div>
                   </div>
                 </button>
               ))}
@@ -318,8 +317,14 @@ export function DiaryListPanel({ variant = "standalone", user: externalUser = nu
       <div className="space-y-6">
         {bodyContent}
         {selectedDiary && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-            <div className="w-full max-w-2xl rounded-lg bg-white p-6 shadow-xl">
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4"
+            onClick={closeModal}
+          >
+            <div
+              className="w-full max-w-2xl rounded-lg bg-white p-6 shadow-xl"
+              onClick={(e) => e.stopPropagation()}
+            >
               <div className="mb-3 flex items-start justify-between gap-3">
                 <div>
                   <p className="text-xs text-zinc-500">
@@ -332,7 +337,7 @@ export function DiaryListPanel({ variant = "standalone", user: externalUser = nu
                 </div>
                 <button
                   className="rounded border border-zinc-300 px-3 py-1 text-sm text-zinc-700 hover:border-zinc-500"
-                  onClick={() => setSelectedDiary(null)}
+                  onClick={closeModal}
                 >
                   閉じる
                 </button>
@@ -355,8 +360,14 @@ export function DiaryListPanel({ variant = "standalone", user: externalUser = nu
       </main>
 
       {selectedDiary && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-          <div className="w-full max-w-2xl rounded-lg bg-white p-6 shadow-xl">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4"
+          onClick={closeModal}
+        >
+          <div
+            className="w-full max-w-2xl rounded-lg bg-white p-6 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="mb-3 flex items-start justify-between gap-3">
               <div>
                 <p className="text-xs text-zinc-500">
@@ -369,7 +380,7 @@ export function DiaryListPanel({ variant = "standalone", user: externalUser = nu
               </div>
               <button
                 className="rounded border border-zinc-300 px-3 py-1 text-sm text-zinc-700 hover:border-zinc-500"
-                onClick={() => setSelectedDiary(null)}
+              onClick={closeModal}
               >
                 閉じる
               </button>

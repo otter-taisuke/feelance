@@ -23,7 +23,7 @@ def ensure_data_files() -> None:
         )
     if not DIARY_FILE.exists():
         DIARY_FILE.write_text(
-            "id,event_name,diary_title,diary_body,transaction_date,created_at,user_id\n",
+            "id,tx_id,event_name,diary_title,diary_body,transaction_date,created_at,user_id\n",
             encoding="utf-8",
         )
     if not CHAT_FILE.exists():
@@ -61,6 +61,7 @@ def read_diary() -> pd.DataFrame:
         DIARY_FILE,
         dtype={
             "id": str,
+            "tx_id": str,
             "event_name": str,
             "diary_title": str,
             "diary_body": str,
@@ -75,6 +76,7 @@ def read_diary() -> pd.DataFrame:
 
     expected_cols = [
         "id",
+        "tx_id",
         "event_name",
         "diary_title",
         "diary_body",
@@ -94,6 +96,12 @@ def read_diary() -> pd.DataFrame:
     if missing_id.any():
         df.loc[missing_id, "id"] = [str(uuid4()) for _ in range(missing_id.sum())]
         changed = True
+
+    if "tx_id" in df.columns:
+        missing_tx = df["tx_id"].astype(str).str.strip() == ""
+        if missing_tx.any():
+            df.loc[missing_tx, "tx_id"] = ""
+            changed = True
 
     # 日付型に変換（欠損はNaT）
     df["transaction_date"] = pd.to_datetime(df["transaction_date"], errors="coerce")
