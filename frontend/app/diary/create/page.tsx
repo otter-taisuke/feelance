@@ -291,15 +291,14 @@ export default function CreateDiaryPage() {
     <div className="min-h-screen bg-[var(--background)] text-zinc-900">
       <AppHeader />
       <main className="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-8">
-        <header className="flex flex-col gap-2">
-          <h1 className="text-2xl font-bold">日記作成</h1>
-          <p className="text-sm text-zinc-600">
-            選択されたイベントをもとにAIと対話し、日記を作成します。
-          </p>
-        </header>
-
-        <div className="rounded-lg bg-white p-4 shadow-sm">
-          <h2 className="text-lg font-semibold">選択されたイベント</h2>
+        <div className="rounded-lg bg-white p-4 shadow-sm space-y-3">
+          <div className="flex flex-col gap-1">
+            <h1 className="text-2xl font-bold">日記作成</h1>
+            <p className="text-sm text-zinc-600">
+              選択されたイベントをもとにAIと対話し、日記を作成します。
+            </p>
+            <h2 className="text-lg font-semibold">選択されたイベント</h2>
+          </div>
           {loadingTx && <p className="text-sm text-zinc-500">読み込み中...</p>}
           {txError && <p className="text-sm text-red-600">{txError}</p>}
           {transaction && (() => {
