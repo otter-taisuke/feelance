@@ -61,9 +61,20 @@ def list_diary(
     year: Optional[int] = None,
     month: Optional[int] = None,
     tx_id: Optional[str] = None,
+    price_min: Optional[float] = None,
+    price_max: Optional[float] = None,
+    sentiment: Optional[int] = None,
 ) -> List[DiaryEntry]:
     user = _get_user_from_cookie(request)
-    return list_diaries(user.user_id, year=year, month=month, tx_id=tx_id)
+    return list_diaries(
+        user.user_id,
+        year=year,
+        month=month,
+        tx_id=tx_id,
+        price_min=price_min,
+        price_max=price_max,
+        sentiment=sentiment,
+    )
 
 
 @router.get("/chat", response_model=ChatHistoryResponse)
