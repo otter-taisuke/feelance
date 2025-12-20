@@ -59,13 +59,19 @@ export function AppHeader({ user: controlledUser, onLogout }: AppHeaderProps) {
   return (
     <header className="bg-[var(--background)]">
       <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-6">
-        <div className="flex flex-col gap-2">
-          <Link href="/" className="text-2xl font-bold text-zinc-900">
-            Feelance
+        <div className="flex items-center gap-3">
+          <Link href="/" className="flex items-center">
+            <img
+              src="/logo-otter.png"
+              alt="Feelance"
+              className="h-12 w-auto object-contain"
+            />
           </Link>
-          <p className="text-sm text-zinc-600">
-            家計簿＋感情スコアでHappy Moneyを可視化
-          </p>
+          {/* <div className="flex flex-col gap-1">
+            <p className="text-sm text-zinc-600">
+              家計簿＋感情スコアでHappy Moneyを可視化
+            </p>
+          </div> */}
         </div>
         <div className="flex flex-wrap items-center gap-3 text-sm">
           {user ? (
