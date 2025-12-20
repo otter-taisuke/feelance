@@ -25,8 +25,10 @@ class RetrospectiveEvent(BaseModel):
 
 
 class EmotionBucket(BaseModel):
+    value: int
     label: str
     count: int
+    short_label: Optional[str] = None
 
 
 class RetrospectiveSummary(BaseModel):

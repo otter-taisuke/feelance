@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 
 import { HappyChan } from "@/components/common/HappyChan";
 import { fetchDiaries, fetchRetrospectiveSummary } from "@/lib/api";
+import moodConfig from "@/config/mood.json";
 import type {
   DiaryEntry,
   EmotionBucket,
@@ -26,10 +27,12 @@ type DiaryModal = {
   date?: string;
 };
 
-const BUCKET_COLORS: Record<string, string> = {
-  positive: "#2563eb",
-  neutral: "#94a3b8",
-  negative: "#ef4444",
+const MOOD_COLORS: Record<number, string> = {
+  2: "#2563eb", // text-blue-600
+  1: "#3b82f6", // text-blue-500
+  0: "#4b5563", // text-gray-600
+  [-1]: "#ef4444", // text-red-500
+  [-2]: "#dc2626", // text-red-600
 };
 
 const SECTION_CLASS = "rounded-lg bg-white p-4 shadow-sm";
@@ -38,6 +41,7 @@ const formatYen = (value: number) =>
   new Intl.NumberFormat("ja-JP", { style: "currency", currency: "JPY" }).format(value);
 
 const formatSigned = (value: number) => (value >= 0 ? `+${value}` : `${value}`);
+const formatHappy = (value: number) => `${formatSigned(value)}♡`;
 
 export function RetrospectivePanel({ user, months = 12 }: Props) {
   const [summary, setSummary] = useState<RetrospectiveSummary | null>(null);
@@ -114,10 +118,20 @@ export function RetrospectivePanel({ user, months = 12 }: Props) {
     });
   };
 
+  const openDiaryFromCard = useCallback((diary: RetrospectiveDiary) => {
+    setDiaryModal({
+      title: diary.title || "タイトルなし",
+      body: diary.content,
+      eventTitle: diary.title || "イベント",
+      date: diary.date,
+    });
+  }, []);
+
   const renderDiaryCard = (diary: RetrospectiveDiary) => (
-    <div
+    <button
       key={diary.diary_id}
-      className="rounded border border-zinc-200 bg-zinc-50 p-3 shadow-sm"
+      onClick={() => openDiaryFromCard(diary)}
+      className="w-full rounded border border-zinc-200 bg-zinc-50 p-3 text-left shadow-sm transition hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-300"
     >
       <div className="flex items-center justify-between gap-2">
         <div className="text-sm font-semibold text-zinc-800">{diary.title || "タイトルなし"}</div>
@@ -126,12 +140,12 @@ export function RetrospectivePanel({ user, months = 12 }: Props) {
             diary.amount >= 0 ? "text-blue-700" : "text-red-700"
           }`}
         >
-          {formatSigned(Math.trunc(diary.amount))}
+          {formatHappy(Math.trunc(diary.amount))}
         </span>
       </div>
       <div className="mt-1 text-xs text-zinc-500">{diary.date}</div>
       <p className="mt-2 line-clamp-3 text-sm text-zinc-700 whitespace-pre-line">{diary.content}</p>
-    </div>
+    </button>
   );
 
   const renderEventItem = (event: RetrospectiveEvent) => (
@@ -142,7 +156,7 @@ export function RetrospectivePanel({ user, months = 12 }: Props) {
       <div>
         <div className="text-sm font-semibold text-zinc-800">{event.title}</div>
         <div className="text-xs text-zinc-500">{event.date}</div>
-        <div className="mt-1 text-xs text-zinc-600">感情スコア: {event.sentiment}</div>
+        <div className="mt-1 text-xs text-zinc-600">感情: {getMoodLabel(event.sentiment)}</div>
       </div>
       <div className="flex items-center gap-2">
         <span
@@ -150,7 +164,7 @@ export function RetrospectivePanel({ user, months = 12 }: Props) {
             event.amount >= 0 ? "text-blue-700" : "text-red-700"
           }`}
         >
-          {formatSigned(Math.trunc(event.amount))}
+          {formatHappy(Math.trunc(event.amount))}
         </span>
         {event.has_diary && (
           <button
@@ -165,7 +179,35 @@ export function RetrospectivePanel({ user, months = 12 }: Props) {
     </div>
   );
 
-  const emotionData: EmotionBucket[] = summary?.emotion_buckets ?? [];
+  const moodLabelMap = useMemo(() => {
+    const map = new Map<number, { label: string; short_label: string }>();
+    (moodConfig as any)?.moods?.forEach(
+      (m: { value: number; label: string; short_label: string }) => {
+        map.set(m.value, { label: m.label, short_label: m.short_label ?? m.label });
+      },
+    );
+    return map;
+  }, []);
+
+  const getMoodLabel = useCallback(
+    (value: number) => {
+      const labels = moodLabelMap.get(value);
+      return labels?.label ?? `スコア${value}`;
+    },
+    [moodLabelMap],
+  );
+
+  const emotionData: (EmotionBucket & { short_label?: string })[] = useMemo(() => {
+    const buckets = summary?.emotion_buckets ?? [];
+    return buckets.map((b) => {
+      const labels = moodLabelMap.get(b.value);
+      return {
+        ...b,
+        label: labels?.label ?? b.label ?? `スコア${b.value}`,
+        short_label: labels?.short_label ?? labels?.label ?? b.short_label ?? b.label,
+      };
+    });
+  }, [summary, moodLabelMap]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -258,14 +300,14 @@ export function RetrospectivePanel({ user, months = 12 }: Props) {
                 <Pie
                   data={emotionData}
                   dataKey="count"
-                  nameKey="label"
+                  nameKey="short_label"
                   cx="50%"
                   cy="50%"
                   outerRadius={100}
-                  label={(entry: any) => `${entry.label}: ${entry.count}`}
+                  label={(entry: any) => `${entry.short_label ?? entry.label}: ${entry.count}`}
                 >
                   {emotionData.map((entry) => (
-                    <Cell key={entry.label} fill={BUCKET_COLORS[entry.label] ?? "#cbd5e1"} />
+                    <Cell key={entry.label} fill={MOOD_COLORS[entry.value] ?? "#cbd5e1"} />
                   ))}
                 </Pie>
                 <Tooltip formatter={(value: number | string | undefined) => `${value ?? 0}件`} />

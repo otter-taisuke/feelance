@@ -81,8 +81,10 @@ export type RetrospectiveEvent = {
 };
 
 export type EmotionBucket = {
+  value: number;
   label: string;
   count: number;
+  short_label?: string;
 };
 
 export type RetrospectiveSummary = {

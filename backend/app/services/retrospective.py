@@ -263,30 +263,36 @@ def summarize_retrospective(user_id: str, months: int = 12) -> RetrospectiveSumm
         .iterrows()
     ]
 
-    # Emotion buckets by mood_score
-    def _label(mood: Optional[float]) -> str:
-        if mood is None:
-            return "neutral"
-        try:
-            mood_int = int(mood)
-        except Exception:
-            return "neutral"
-        if mood_int > 0:
-            return "positive"
-        if mood_int < 0:
-            return "negative"
-        return "neutral"
+    # Emotion buckets (5段階)
+    mood_labels = {
+        2: ("最高", "最高"),
+        1: ("やや良", "やや良"),
+        0: ("普通", "普通"),
+        -1: ("やや悪", "やや悪"),
+        -2: ("最悪", "最悪"),
+    }
 
     if tx_df.empty:
         buckets: List[EmotionBucket] = []
     else:
-        labels = tx_df["mood_score"].apply(_label)
-        counts = labels.value_counts().to_dict()
-        buckets = [
-            EmotionBucket(label=lbl, count=int(counts.get(lbl, 0)))
-            for lbl in ["positive", "neutral", "negative"]
-            if counts.get(lbl, 0) > 0
-        ]
+        mood_values = tx_df["mood_score"].dropna().apply(
+            lambda x: max(min(int(x), 2), -2)
+        )
+        counts = mood_values.value_counts().to_dict()
+        buckets = []
+        for val in [2, 1, 0, -1, -2]:
+            count = counts.get(val, 0)
+            if count <= 0:
+                continue
+            label, short_label = mood_labels.get(val, (f"スコア{val}", f"スコア{val}"))
+            buckets.append(
+                EmotionBucket(
+                    value=val,
+                    label=label,
+                    short_label=short_label,
+                    count=int(count),
+                )
+            )
 
     cache_ttl = timedelta(hours=SUMMARY_CACHE_TTL_HOURS)
     cached_summary = read_summary_cache(user_id, months, cache_ttl)
