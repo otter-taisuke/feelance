@@ -45,6 +45,7 @@ export default function CreateDiaryPage() {
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [initialAsked, setInitialAsked] = useState(false);
+  const [storageLoaded, setStorageLoaded] = useState(false);
 
   useEffect(() => {
     if (!txId) return;
@@ -206,19 +207,19 @@ export default function CreateDiaryPage() {
     }
   };
 
-  useEffect(() => {
-    if (transaction && txId && !initialAsked && chat.messages.length === 0 && !chat.streaming) {
-      void askInitialQuestion();
-    }
-  }, [transaction, txId, initialAsked, chat.messages.length, chat.streaming]);
-
   const storageKey = txId ? `diary-chat:${txId}` : null;
 
   useEffect(() => {
-    if (!storageKey) return;
+    if (!storageKey) {
+      setStorageLoaded(true);
+      return;
+    }
     try {
       const raw = localStorage.getItem(storageKey);
-      if (!raw) return;
+      if (!raw) {
+        setStorageLoaded(true);
+        return;
+      }
       const parsed = JSON.parse(raw) as {
         messages?: ChatMessage[];
         diary_title?: string;
@@ -237,10 +238,18 @@ export default function CreateDiaryPage() {
       ) {
         setInitialAsked(true);
       }
+      setStorageLoaded(true);
     } catch {
       // ignore corrupted data
+      setStorageLoaded(true);
     }
   }, [storageKey]);
+
+  useEffect(() => {
+    if (transaction && txId && storageLoaded && !initialAsked && chat.messages.length === 0 && !chat.streaming) {
+      void askInitialQuestion();
+    }
+  }, [transaction, txId, storageLoaded, initialAsked, chat.messages.length, chat.streaming]);
 
   useEffect(() => {
     if (!storageKey) return;

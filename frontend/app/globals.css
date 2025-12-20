@@ -15,8 +15,9 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0f0d0b;
-    --foreground: #ededed;
+    /* ダークモードでもカフェラテ色を維持 */
+    --background: #f4eadf;
+    --foreground: #171717;
   }
 }
 
