@@ -155,10 +155,12 @@ def stream_chat(tx_id: str, messages: List[ChatMessage], user_id: str) -> Genera
 
 def generate_diary(tx_id: str, messages: List[ChatMessage], user_id: str) -> GenerateDiaryResponse:
     event = get_transaction(tx_id)
-    system_prompt = _build_system_prompt(event.model_dump()) + (
+    system_prompt = (
+        "あなたはユーザーの代わりに日記を作成するアシスタントです。"
         "\nこれまでの会話を踏まえ、JSON形式で日記を作成してください。"
         '\nキーは "diary_title", "diary_body" とし、文章は日本語で書いてください。'
         "\n前置きや説明文は不要で、純粋なJSONだけを返してください。"
+        "\n例: {\"diary_title\": \"日記タイトル\", \"diary_body\": \"日記本文\"}"
     )
     conversation_text = _build_conversation_history_text(event, messages)
     user_generation_prompt = f"{conversation_text}"
@@ -172,6 +174,7 @@ def generate_diary(tx_id: str, messages: List[ChatMessage], user_id: str) -> Gen
             "call_openai_generate",
             {"tx_id": tx_id, "messages_count": len(formatted_messages), "model": MODEL},
         )
+        print(formatted_messages)
         # endregion
         res = _ensure_client().chat.completions.create(
             model=MODEL,
@@ -257,4 +260,3 @@ def save_diary(tx_id: str, diary_title: str, diary_body: str, user_id: str) -> d
     df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
     write_diary(df)
     return new_row
-
