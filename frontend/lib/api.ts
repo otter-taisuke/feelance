@@ -181,6 +181,16 @@ export async function streamDiaryChat(
   }
 }
 
+export async function fetchDiaryChat(txId: string): Promise<{ messages: ChatMessage[] }> {
+  const res = await fetch(`${API_BASE}/diary/chat?tx_id=${encodeURIComponent(txId)}`, {
+    credentials: "include",
+  });
+  if (!res.ok) {
+    await handleError(res);
+  }
+  return res.json();
+}
+
 export async function generateDiary(
   txId: string,
   messages: ChatMessage[],

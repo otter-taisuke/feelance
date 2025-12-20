@@ -141,3 +141,21 @@ def append_chat_log(tx_id: str, user_id: str, messages_json: str, created_at: da
     df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
     df.to_csv(CHAT_FILE, index=False, date_format="%Y-%m-%dT%H:%M:%S")
 
+
+def read_chat_log(tx_id: str, user_id: str) -> pd.DataFrame:
+    """指定されたトランザクションの最新チャットログを返す。なければ空DataFrame。"""
+    ensure_data_files()
+    try:
+        df = pd.read_csv(
+            CHAT_FILE,
+            dtype={"tx_id": str, "user_id": str, "messages_json": str},
+            parse_dates=["created_at"],
+        )
+    except Exception:
+        return pd.DataFrame(columns=["tx_id", "user_id", "messages_json", "created_at"])
+    df = df[(df["tx_id"] == tx_id) & (df["user_id"] == user_id)]
+    if df.empty:
+        return pd.DataFrame(columns=["tx_id", "user_id", "messages_json", "created_at"])
+    # 最新のみ返す
+    df = df.sort_values(by="created_at")
+    return df.iloc[[-1]]

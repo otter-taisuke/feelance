@@ -16,6 +16,10 @@ class ChatStreamRequest(BaseModel):
     )
 
 
+class ChatHistoryResponse(BaseModel):
+    messages: List[ChatMessage] = Field(default_factory=list)
+
+
 class GenerateDiaryRequest(BaseModel):
     tx_id: str
     messages: List[ChatMessage] = Field(default_factory=list)

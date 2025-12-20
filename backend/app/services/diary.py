@@ -12,7 +12,7 @@ from openai import OpenAI
 from dotenv import load_dotenv
 
 from app.constants.mood import get_mood_label
-from app.repositories.csv_store import append_chat_log, read_diary, write_diary
+from app.repositories.csv_store import append_chat_log, read_chat_log, read_diary, write_diary
 from app.schemas.diary import ChatMessage, DiaryEntry, GenerateDiaryResponse
 from app.services.transactions import get_transaction
 
@@ -57,6 +57,34 @@ def _format_messages(system_prompt: str, messages: Iterable[ChatMessage]):
     for m in messages:
         formatted.append({"role": m.role, "content": m.content})
     return formatted
+
+
+def _load_chat_messages(tx_id: str, user_id: str) -> List[ChatMessage]:
+    """CSVからチャット履歴をロードし、user/assistantのみを返す。"""
+    df = read_chat_log(tx_id, user_id)
+    if df.empty:
+        return []
+    try:
+        raw = json.loads(df.iloc[-1]["messages_json"])
+        if not isinstance(raw, list):
+            return []
+    except Exception:
+        return []
+
+    messages: List[ChatMessage] = []
+    for m in raw:
+        try:
+            role = m.get("role")
+            content = m.get("content")
+        except Exception:
+            continue
+        if role not in ("user", "assistant"):
+            # systemなどはUIには返さない
+            continue
+        if not isinstance(content, str):
+            continue
+        messages.append(ChatMessage(role=role, content=content))
+    return messages
 
 
 def _build_conversation_history_text(event, messages: Iterable[ChatMessage]) -> str:
@@ -152,6 +180,11 @@ def stream_chat(tx_id: str, messages: List[ChatMessage], user_id: str) -> Genera
             "chat_log_append_failed",
             {"tx_id": tx_id},
         )
+
+
+def get_chat_history(tx_id: str, user_id: str) -> List[ChatMessage]:
+    """保存済みチャット履歴を返す。なければ空配列。"""
+    return _load_chat_messages(tx_id, user_id)
 
 
 def generate_diary(tx_id: str, messages: List[ChatMessage], user_id: str) -> GenerateDiaryResponse:
