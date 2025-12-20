@@ -18,6 +18,7 @@ import { LoginPanel } from "@/components/auth/LoginPanel";
 import { CalendarView } from "@/components/calendar/CalendarView";
 import { DayModal } from "@/components/modals/DayModal";
 import { DiarySelectEventModal } from "@/components/modals/DiarySelectEventModal";
+import { AppHeader } from "@/components/layout/AppHeader";
 import { useTransactions } from "@/hooks/useTransactions";
 import { login, logout, me } from "@/lib/api";
 import { getMoodLabel, moodOptions } from "@/lib/mood";
@@ -382,35 +383,9 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-[var(--background)] text-zinc-900">
+      <AppHeader />
       <div className="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-8">
-        <header className="flex items-center justify-between gap-4">
-          <div className="flex flex-col gap-2">
-            <h1 className="text-2xl font-bold">Feelance</h1>
-            <p className="text-sm text-zinc-600">
-              家計簿＋感情スコアでHappy Moneyを可視化
-            </p>
-          </div>
-          {user && (
-            <div className="flex items-center gap-3">
-              <span className="text-lg font-semibold">
-                {user.display_name || user.user_id}
-              </span>
-              <Link
-                href="/diary"
-                className="rounded border border-zinc-300 bg-white px-3 py-1 text-sm text-zinc-700 hover:border-zinc-500"
-              >
-                日記一覧へ
-              </Link>
-              <button
-                className="rounded border border-zinc-300 bg-white px-3 py-1 text-sm text-zinc-700 hover:border-zinc-500 disabled:opacity-50"
-                onClick={handleLogout}
-                disabled={authLoading}
-              >
-                ログアウト
-              </button>
-            </div>
-          )}
-        </header>
+       
 
         {!user && (
           <LoginPanel
