@@ -139,7 +139,7 @@ export default function DiaryPage() {
   }, [diaries, keyword]);
 
   return (
-    <div className="min-h-screen bg-zinc-50 text-zinc-900">
+    <div className="min-h-screen bg-[var(--background)] text-zinc-900">
       <div className="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-8">
         <header className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-col gap-1">
@@ -149,13 +149,13 @@ export default function DiaryPage() {
           <div className="flex items-center gap-2">
             <Link
               href="/"
-              className="rounded border border-zinc-300 px-3 py-1 text-sm text-zinc-700 hover:border-zinc-500"
+              className="rounded border border-zinc-300 bg-white px-3 py-1 text-sm text-zinc-700 hover:border-zinc-500"
             >
               ホームに戻る
             </Link>
             {user ? (
               <button
-                className="rounded border border-zinc-300 px-3 py-1 text-sm text-zinc-700 hover:border-zinc-500 disabled:opacity-50"
+                className="rounded border border-zinc-300 bg-white px-3 py-1 text-sm text-zinc-700 hover:border-zinc-500 disabled:opacity-50"
                 onClick={handleLogout}
                 disabled={authLoading}
               >
