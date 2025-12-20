@@ -113,7 +113,7 @@ export function DiarySelectEventModal({
                         <span className="font-semibold text-zinc-900">{tx.item}</span>
                         <span className="text-sm text-zinc-700">
                           {tx.happy_amount >= 0 ? "+" : ""}
-                          {tx.happy_amount.toLocaleString("ja-JP")}
+                          {tx.happy_amount.toLocaleString("ja-JP")}♡
                         </span>
                       </div>
                       <div className="mt-1 text-xs text-zinc-500">

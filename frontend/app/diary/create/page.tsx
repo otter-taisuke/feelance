@@ -358,7 +358,7 @@ export default function CreateDiaryPage() {
                     <div className="flex flex-col items-end">
                       <span className="text-sm text-zinc-600 whitespace-nowrap">
                         {transaction.happy_amount >= 0 ? "+" : ""}
-                        {transaction.happy_amount.toLocaleString("ja-JP")}
+                        {transaction.happy_amount.toLocaleString("ja-JP")}♡
                       </span>
                       <span className="text-xs text-zinc-500">
                         {transaction.amount.toLocaleString("ja-JP")} 円
