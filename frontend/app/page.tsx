@@ -16,7 +16,7 @@ import {
 import { LoginPanel } from "@/components/auth/LoginPanel";
 import { CalendarView } from "@/components/calendar/CalendarView";
 import { DayModal } from "@/components/modals/DayModal";
-import { ReportSelectEventModal } from "@/components/modals/ReportSelectEventModal";
+import { DiarySelectEventModal } from "@/components/modals/DiarySelectEventModal";
 import { useTransactions } from "@/hooks/useTransactions";
 import { login, logout, me } from "@/lib/api";
 import { getMoodLabel, moodOptions } from "@/lib/mood";
@@ -48,7 +48,7 @@ export default function Home() {
   const [user, setUser] = useState<User | null>(null);
   const [selectedDate, setSelectedDate] = useState<string>(() => getToday());
   const [showModal, setShowModal] = useState(false);
-  const [showReportSelectModal, setShowReportSelectModal] = useState(false);
+  const [showDiarySelectModal, setShowDiarySelectModal] = useState(false);
   const [statsYear, setStatsYear] = useState<number | null>(null); // 月別グラフ用
   const [statsPickerOpen, setStatsPickerOpen] = useState(false); // 日別グラフの年月ピッカー
   const [statsDraftYear, setStatsDraftYear] = useState<number | null>(null);
@@ -346,10 +346,10 @@ export default function Home() {
 
   const startNewEntry = () => resetForm(selectedDate);
 
-  const handleReportExisting = () => {
+  const handleDiaryExisting = () => {
     if (!form.id) return;
     setShowModal(false);
-    router.push(`/reports/create?tx_id=${form.id}`);
+    router.push(`/diary/create?tx_id=${form.id}`);
   };
 
   const handleEventClick = (eventId: string) => {
@@ -429,7 +429,7 @@ export default function Home() {
                 <h2 className="text-lg font-semibold">カレンダー</h2>
                 <button
                   className="rounded border border-blue-500 px-3 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-50 disabled:opacity-50"
-                  onClick={() => setShowReportSelectModal(true)}
+                  onClick={() => setShowDiarySelectModal(true)}
                   disabled={transactions.length === 0}
                 >
                   日記を作成
@@ -661,19 +661,19 @@ export default function Home() {
         onNew={startNewEntry}
         onDelete={form.id ? () => handleDelete(form.id!) : undefined}
         onSelectTx={pickTransaction}
-        onReportExisting={form.id ? handleReportExisting : undefined}
+        onDiaryExisting={form.id ? handleDiaryExisting : undefined}
         onClose={() => setShowModal(false)}
         formatYen={formatYen}
       />
-      <ReportSelectEventModal
-        open={showReportSelectModal}
+      <DiarySelectEventModal
+        open={showDiarySelectModal}
         selectedDate={selectedDate}
         events={events}
         onSelectEvent={(eventId) => {
-          setShowReportSelectModal(false);
-          router.push(`/reports/create?tx_id=${eventId}`);
+          setShowDiarySelectModal(false);
+          router.push(`/diary/create?tx_id=${eventId}`);
         }}
-        onClose={() => setShowReportSelectModal(false)}
+        onClose={() => setShowDiarySelectModal(false)}
       />
     </div>
   );

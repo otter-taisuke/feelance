@@ -11,8 +11,8 @@ from openai import OpenAI
 from dotenv import load_dotenv
 
 from app.constants.mood import get_mood_label
-from app.repositories.csv_store import append_chat_log, read_reports, write_reports
-from app.schemas.reports import ChatMessage, GenerateReportResponse
+from app.repositories.csv_store import append_chat_log, read_diary, write_diary
+from app.schemas.diary import ChatMessage, GenerateDiaryResponse
 from app.services.transactions import get_transaction
 
 
@@ -39,7 +39,7 @@ def _build_system_prompt(event: dict) -> str:
         "あなたはユーザーの日記作成を支援するアシスタントです。\n"
         "以下のイベント情報を踏まえ、あなたが主体となって質問を投げかけ、ユーザーから詳細を引き出してください。\n"
         "各ターンは必ず質問で終わり、ユーザーの回答を待って次の質問をする流れにしてください（ユーザーからの質問には回答せず、会話を主導する）。\n"
-        "最終的にはレポートタイトルと本文を組み立てやすい情報を集めます。\n"
+        "最終的には日記タイトルと本文を組み立てやすい情報を集めます。\n"
         f"- 日付: {event['date']}\n"
         f"- イベント名: {event['item']}\n"
         f"- 金額: {event['amount']} 円\n"
@@ -147,17 +147,17 @@ def stream_chat(tx_id: str, messages: List[ChatMessage], user_id: str) -> Genera
     except Exception:
         _log_debug(
             "H2",
-            "services/reports.py:stream_chat",
+            "services/diary.py:stream_chat",
             "chat_log_append_failed",
             {"tx_id": tx_id},
         )
 
 
-def generate_report(tx_id: str, messages: List[ChatMessage], user_id: str) -> GenerateReportResponse:
+def generate_diary(tx_id: str, messages: List[ChatMessage], user_id: str) -> GenerateDiaryResponse:
     event = get_transaction(tx_id)
     system_prompt = _build_system_prompt(event.model_dump()) + (
-        "\nこれまでの会話を踏まえ、JSON形式で日記レポートを返してください。"
-        '\nキーは "report_title", "report_body" とし、文章は日本語で書いてください。'
+        "\nこれまでの会話を踏まえ、JSON形式で日記を作成してください。"
+        '\nキーは "diary_title", "diary_body" とし、文章は日本語で書いてください。'
         "\n前置きや説明文は不要で、純粋なJSONだけを返してください。"
     )
     conversation_text = _build_conversation_history_text(event, messages)
@@ -168,7 +168,7 @@ def generate_report(tx_id: str, messages: List[ChatMessage], user_id: str) -> Ge
         # region agent log
         _log_debug(
             "H1",
-            "services/reports.py:generate_report:before_call",
+            "services/diary.py:generate_diary:before_call",
             "call_openai_generate",
             {"tx_id": tx_id, "messages_count": len(formatted_messages), "model": MODEL},
         )
@@ -187,18 +187,18 @@ def generate_report(tx_id: str, messages: List[ChatMessage], user_id: str) -> Ge
     # region agent log
     _log_debug(
         "H1",
-        "services/reports.py:generate_report:after_call",
+        "services/diary.py:generate_diary:after_call",
         "openai_response_content",
         {"tx_id": tx_id, "content_preview": content[:500]},
     )
     # endregion
-    return _parse_report_content(content)
+    return _parse_diary_content(content)
 
 
-def _parse_report_content(content: str) -> GenerateReportResponse:
+def _parse_diary_content(content: str) -> GenerateDiaryResponse:
     # 1. 期待通りのJSON
     try:
-        return GenerateReportResponse.model_validate_json(content)
+        return GenerateDiaryResponse.model_validate_json(content)
     except Exception:
         pass
 
@@ -211,25 +211,25 @@ def _parse_report_content(content: str) -> GenerateReportResponse:
                 json_body = "\n".join(parts[i + 1 : i + 2]).strip()
                 if json_body:
                     try:
-                        return GenerateReportResponse.model_validate_json(json_body)
+                        return GenerateDiaryResponse.model_validate_json(json_body)
                     except Exception:
                         continue
 
     # 3. 素朴に JSON デコードを試す
     try:
         data = json.loads(content)
-        if isinstance(data, dict) and ("report_title" in data or "report_body" in data):
+        if isinstance(data, dict) and ("diary_title" in data or "diary_body" in data):
             normalized = {
-                "report_title": (data.get("report_title") or "").strip(),
-                "report_body": (data.get("report_body") or "").strip(),
+                "diary_title": (data.get("diary_title") or "").strip(),
+                "diary_body": (data.get("diary_body") or "").strip(),
             }
-            return GenerateReportResponse.model_validate(normalized)
-        return GenerateReportResponse.model_validate(data)
+            return GenerateDiaryResponse.model_validate(normalized)
+        return GenerateDiaryResponse.model_validate(data)
     except Exception:
         # region agent log
         _log_debug(
             "H1",
-            "services/reports.py:_parse_report_content",
+            "services/diary.py:_parse_diary_content",
             "parse_failed",
             {"content_preview": content[:500]},
         )
@@ -239,22 +239,22 @@ def _parse_report_content(content: str) -> GenerateReportResponse:
     snippet = textwrap.shorten(content.replace("\n", " "), width=200, placeholder="...")
     raise HTTPException(
         status_code=500,
-        detail="レポートの生成に失敗しました。少し会話を進めてから、もう一度生成してください。",
+        detail="日記の生成に失敗しました。少し会話を進めてから、もう一度生成してください。",
     )
 
 
-def save_report(tx_id: str, report_title: str, report_body: str, user_id: str) -> dict:
+def save_diary(tx_id: str, diary_title: str, diary_body: str, user_id: str) -> dict:
     event = get_transaction(tx_id)
     now = datetime.utcnow()
-    df = read_reports()
+    df = read_diary()
     new_row = {
         "event_name": event.item,
-        "report_title": report_title,
-        "report_body": report_body,
+        "diary_title": diary_title,
+        "diary_body": diary_body,
         "created_at": now,
         "user_id": user_id,
     }
     df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
-    write_reports(df)
+    write_diary(df)
     return new_row
 

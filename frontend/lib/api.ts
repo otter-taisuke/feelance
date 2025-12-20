@@ -1,8 +1,8 @@
 import { API_BASE } from "./constants";
 import type {
   ChatMessage,
-  ReportGenerateResponse,
-  SaveReportResponse,
+  DiaryGenerateResponse,
+  SaveDiaryResponse,
   Transaction,
   TransactionForm,
   User,
@@ -140,13 +140,13 @@ export async function getTransaction(txId: string): Promise<Transaction> {
   return res.json();
 }
 
-export async function streamReportChat(
+export async function streamDiaryChat(
   txId: string,
   messages: ChatMessage[],
   onToken: (token: string) => void,
   signal?: AbortSignal,
 ): Promise<void> {
-  const res = await fetch(`${API_BASE}/reports/chat/stream`, {
+  const res = await fetch(`${API_BASE}/diary/chat/stream`, {
     method: "POST",
     headers: jsonHeaders,
     body: JSON.stringify({ tx_id: txId, messages }),
@@ -180,11 +180,11 @@ export async function streamReportChat(
   }
 }
 
-export async function generateReport(
+export async function generateDiary(
   txId: string,
   messages: ChatMessage[],
-): Promise<ReportGenerateResponse> {
-  const res = await fetch(`${API_BASE}/reports/generate`, {
+): Promise<DiaryGenerateResponse> {
+  const res = await fetch(`${API_BASE}/diary/generate`, {
     method: "POST",
     headers: jsonHeaders,
     body: JSON.stringify({ tx_id: txId, messages }),
@@ -196,18 +196,18 @@ export async function generateReport(
   return res.json();
 }
 
-export async function saveReport(
+export async function saveDiary(
   txId: string,
-  reportTitle: string,
-  reportBody: string,
-): Promise<SaveReportResponse> {
-  const res = await fetch(`${API_BASE}/reports/save`, {
+  diaryTitle: string,
+  diaryBody: string,
+): Promise<SaveDiaryResponse> {
+  const res = await fetch(`${API_BASE}/diary/save`, {
     method: "POST",
     headers: jsonHeaders,
     body: JSON.stringify({
       tx_id: txId,
-      report_title: reportTitle,
-      report_body: reportBody,
+      diary_title: diaryTitle,
+      diary_body: diaryBody,
     }),
     credentials: "include",
   });

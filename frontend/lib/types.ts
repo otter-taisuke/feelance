@@ -33,15 +33,15 @@ export type ChatMessage = {
   content: string;
 };
 
-export type ReportGenerateResponse = {
-  report_title: string;
-  report_body: string;
+export type DiaryGenerateResponse = {
+  diary_title: string;
+  diary_body: string;
 };
 
-export type SaveReportResponse = {
+export type SaveDiaryResponse = {
   event_name: string;
-  report_title: string;
-  report_body: string;
+  diary_title: string;
+  diary_body: string;
   created_at: string;
   user_id: string;
 };

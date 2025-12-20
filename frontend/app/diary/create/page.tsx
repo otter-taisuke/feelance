@@ -4,10 +4,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import {
-  generateReport,
+  generateDiary,
   getTransaction,
-  saveReport,
-  streamReportChat,
+  saveDiary,
+  streamDiaryChat,
 } from "@/lib/api";
 import { moodOptions, getMoodLabel } from "@/lib/mood";
 import type { ChatMessage, Transaction } from "@/lib/types";
@@ -26,7 +26,7 @@ const initialChatState: ChatState = {
   error: null,
 };
 
-export default function CreateReportPage() {
+export default function CreateDiaryPage() {
   const searchParams = useSearchParams();
   const txId = searchParams.get("tx_id");
   const router = useRouter();
@@ -39,8 +39,8 @@ export default function CreateReportPage() {
   const [input, setInput] = useState("");
   const abortRef = useRef<AbortController | null>(null);
 
-  const [reportTitle, setReportTitle] = useState("");
-  const [reportBody, setReportBody] = useState("");
+  const [diaryTitle, setDiaryTitle] = useState("");
+  const [diaryBody, setDiaryBody] = useState("");
   const [generating, setGenerating] = useState(false);
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
@@ -90,7 +90,7 @@ export default function CreateReportPage() {
     abortRef.current = controller;
 
     try {
-      await streamReportChat(
+      await streamDiaryChat(
         txId,
         nextMessages,
         (token) => {
@@ -131,7 +131,7 @@ export default function CreateReportPage() {
     const controller = new AbortController();
     abortRef.current = controller;
     try {
-      await streamReportChat(
+      await streamDiaryChat(
         txId,
         [],
         (token) => {
@@ -170,15 +170,15 @@ export default function CreateReportPage() {
     setGenerating(true);
     setNotice(null);
     try {
-      const res = await generateReport(txId, chat.messages);
-      const title = (res.report_title ?? "").trim();
-      const body = (res.report_body ?? "").trim();
-      setReportTitle(title);
-      setReportBody(body);
+      const res = await generateDiary(txId, chat.messages);
+      const title = (res.diary_title ?? "").trim();
+      const body = (res.diary_body ?? "").trim();
+      setDiaryTitle(title);
+      setDiaryBody(body);
       const hasContent = Boolean(title || body);
       setNotice(
         hasContent
-          ? "AIがレポートを生成しました。必要に応じて再生成できます。"
+          ? "AIが日記を生成しました。必要に応じて再生成できます。"
           : "生成結果が空でした。もう一度生成してください。",
       );
     } catch (e) {
@@ -190,15 +190,15 @@ export default function CreateReportPage() {
 
   const handleSave = async () => {
     if (!txId || !transaction) return;
-    if (!reportTitle.trim() || !reportBody.trim()) {
-      setNotice("まずレポートを生成してください");
+    if (!diaryTitle.trim() || !diaryBody.trim()) {
+      setNotice("まず日記を生成してください");
       return;
     }
     setSaving(true);
     setNotice(null);
     try {
-      await saveReport(txId, reportTitle.trim(), reportBody.trim());
-      setNotice("レポートを保存しました");
+      await saveDiary(txId, diaryTitle.trim(), diaryBody.trim());
+      setNotice("日記を保存しました");
     } catch (e) {
       setNotice((e as Error).message || "保存に失敗しました");
     } finally {
@@ -212,7 +212,7 @@ export default function CreateReportPage() {
     }
   }, [transaction, txId, initialAsked, chat.messages.length, chat.streaming]);
 
-  const storageKey = txId ? `report-chat:${txId}` : null;
+  const storageKey = txId ? `diary-chat:${txId}` : null;
 
   useEffect(() => {
     if (!storageKey) return;
@@ -221,19 +221,19 @@ export default function CreateReportPage() {
       if (!raw) return;
       const parsed = JSON.parse(raw) as {
         messages?: ChatMessage[];
-        report_title?: string;
-        report_body?: string;
+        diary_title?: string;
+        diary_body?: string;
       };
       setChat((prev) => ({
         ...prev,
         messages: parsed.messages ?? [],
       }));
-      if (parsed.report_title) setReportTitle(parsed.report_title);
-      if (parsed.report_body) setReportBody(parsed.report_body);
+      if (parsed.diary_title) setDiaryTitle(parsed.diary_title);
+      if (parsed.diary_body) setDiaryBody(parsed.diary_body);
       if (
         (parsed.messages && parsed.messages.length > 0) ||
-        parsed.report_title ||
-        parsed.report_body
+        parsed.diary_title ||
+        parsed.diary_body
       ) {
         setInitialAsked(true);
       }
@@ -246,15 +246,15 @@ export default function CreateReportPage() {
     if (!storageKey) return;
     const data = {
       messages: chat.messages,
-      report_title: reportTitle,
-      report_body: reportBody,
+      diary_title: diaryTitle,
+      diary_body: diaryBody,
     };
     try {
       localStorage.setItem(storageKey, JSON.stringify(data));
     } catch {
       // ignore
     }
-  }, [storageKey, chat.messages, reportTitle, reportBody]);
+  }, [storageKey, chat.messages, diaryTitle, diaryBody]);
 
   if (!txId) {
     return (
@@ -274,9 +274,9 @@ export default function CreateReportPage() {
     <div className="min-h-screen bg-zinc-50 text-zinc-900">
       <div className="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-8">
         <header className="flex flex-col gap-2">
-          <h1 className="text-2xl font-bold">日記レポート作成</h1>
+          <h1 className="text-2xl font-bold">日記作成</h1>
           <p className="text-sm text-zinc-600">
-            選択されたイベントをもとにAIと対話し、レポートを作成します。
+            選択されたイベントをもとにAIと対話し、日記を作成します。
           </p>
         </header>
 
@@ -362,7 +362,7 @@ export default function CreateReportPage() {
                 onClick={handleGenerate}
                 disabled={generating || chat.streaming}
               >
-                {generating ? "レポート生成中..." : "レポートを生成する"}
+                {generating ? "日記生成中..." : "日記を生成する"}
               </button>
               {generating && (
                 <p className="mt-1 text-xs text-zinc-500">数秒お待ちください…</p>
@@ -372,26 +372,26 @@ export default function CreateReportPage() {
 
           <div className="rounded-lg bg-white p-4 shadow-sm space-y-3">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold">レポート</h2>
+              <h2 className="text-lg font-semibold">日記</h2>
               <span className="text-xs text-zinc-500">AI生成のみ（編集不可）</span>
             </div>
             <div className="space-y-2 rounded border border-zinc-200 bg-zinc-50 p-3">
               <p className="text-xs font-semibold text-zinc-500">タイトル（AI生成）</p>
               <p className="whitespace-pre-wrap text-sm">
-                {reportTitle || "まだ生成されていません。チャットが進んだら「生成する」を押してください。"}
+                {diaryTitle || "まだ生成されていません。チャットが進んだら「生成する」を押してください。"}
               </p>
             </div>
             <div className="space-y-2 rounded border border-zinc-200 bg-zinc-50 p-3">
               <p className="text-xs font-semibold text-zinc-500">本文（AI生成）</p>
               <p className="whitespace-pre-wrap text-sm">
-                {reportBody || "まだ生成されていません。チャットが進んだら「生成する」を押してください。"}
+                {diaryBody || "まだ生成されていません。チャットが進んだら「生成する」を押してください。"}
               </p>
             </div>
             <div className="flex items-center gap-2">
               <button
                 className="rounded bg-black px-4 py-2 text-sm text-white disabled:opacity-50"
                 onClick={handleSave}
-                disabled={saving || generating || !reportBody}
+                disabled={saving || generating || !diaryBody}
               >
                 {saving ? "保存中..." : "保存する"}
               </button>

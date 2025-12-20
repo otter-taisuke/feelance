@@ -21,7 +21,7 @@ type Props = {
   onSelectEvent: (eventId: string) => void;
 };
 
-export function ReportSelectEventModal({
+export function DiarySelectEventModal({
   open,
   selectedDate,
   events,

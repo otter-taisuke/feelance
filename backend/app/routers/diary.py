@@ -2,16 +2,16 @@ from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse
 
 from app.routers.auth import _get_user_from_cookie
-from app.schemas.reports import (
+from app.schemas.diary import (
     ChatStreamRequest,
-    GenerateReportRequest,
-    GenerateReportResponse,
-    SaveReportRequest,
-    SaveReportResponse,
+    GenerateDiaryRequest,
+    GenerateDiaryResponse,
+    SaveDiaryRequest,
+    SaveDiaryResponse,
 )
-from app.services.reports import generate_report, save_report, stream_chat
+from app.services.diary import generate_diary, save_diary, stream_chat
 
-router = APIRouter(prefix="/reports", tags=["reports"])
+router = APIRouter(prefix="/diary", tags=["diary"])
 
 
 @router.post("/chat/stream")
@@ -29,20 +29,20 @@ async def chat_stream(payload: ChatStreamRequest, request: Request) -> Streaming
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 
-@router.post("/generate", response_model=GenerateReportResponse)
-def generate(payload: GenerateReportRequest, request: Request) -> GenerateReportResponse:
+@router.post("/generate", response_model=GenerateDiaryResponse)
+def generate(payload: GenerateDiaryRequest, request: Request) -> GenerateDiaryResponse:
     user = _get_user_from_cookie(request)
-    return generate_report(payload.tx_id, payload.messages, user.user_id)
+    return generate_diary(payload.tx_id, payload.messages, user.user_id)
 
 
-@router.post("/save", response_model=SaveReportResponse)
-def save(payload: SaveReportRequest, request: Request) -> SaveReportResponse:
+@router.post("/save", response_model=SaveDiaryResponse)
+def save(payload: SaveDiaryRequest, request: Request) -> SaveDiaryResponse:
     user = _get_user_from_cookie(request)
-    saved = save_report(payload.tx_id, payload.report_title, payload.report_body, user.user_id)
-    return SaveReportResponse(
+    saved = save_diary(payload.tx_id, payload.diary_title, payload.diary_body, user.user_id)
+    return SaveDiaryResponse(
         event_name=saved["event_name"],
-        report_title=saved["report_title"],
-        report_body=saved["report_body"],
+        diary_title=saved["diary_title"],
+        diary_body=saved["diary_body"],
         created_at=saved["created_at"],
         user_id=saved["user_id"],
     )

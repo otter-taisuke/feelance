@@ -7,7 +7,7 @@ from app.core.config import DATA_DIR
 
 USERS_FILE = DATA_DIR / "users.csv"
 TX_FILE = DATA_DIR / "transactions.csv"
-REPORTS_FILE = DATA_DIR / "reports.csv"
+DIARY_FILE = DATA_DIR / "diary.csv"
 CHAT_FILE = DATA_DIR / "chat.csv"
 
 
@@ -20,9 +20,9 @@ def ensure_data_files() -> None:
             "id,user_id,date,item,amount,mood_score,happy_amount,created_at,updated_at\n",
             encoding="utf-8",
         )
-    if not REPORTS_FILE.exists():
-        REPORTS_FILE.write_text(
-            "event_name,report_title,report_body,created_at,user_id\n",
+    if not DIARY_FILE.exists():
+        DIARY_FILE.write_text(
+            "event_name,diary_title,diary_body,created_at,user_id\n",
             encoding="utf-8",
         )
     if not CHAT_FILE.exists():
@@ -53,14 +53,14 @@ def write_transactions(df: pd.DataFrame) -> None:
     df.to_csv(TX_FILE, index=False, date_format="%Y-%m-%dT%H:%M:%S")
 
 
-def read_reports() -> pd.DataFrame:
+def read_diary() -> pd.DataFrame:
     ensure_data_files()
     df = pd.read_csv(
-        REPORTS_FILE,
+        DIARY_FILE,
         dtype={
             "event_name": str,
-            "report_title": str,
-            "report_body": str,
+            "diary_title": str,
+            "diary_body": str,
             "user_id": str,
         },
         parse_dates=["created_at"],
@@ -70,8 +70,8 @@ def read_reports() -> pd.DataFrame:
     return df
 
 
-def write_reports(df: pd.DataFrame) -> None:
-    df.to_csv(REPORTS_FILE, index=False, date_format="%Y-%m-%dT%H:%M:%S")
+def write_diary(df: pd.DataFrame) -> None:
+    df.to_csv(DIARY_FILE, index=False, date_format="%Y-%m-%dT%H:%M:%S")
 
 
 def append_chat_log(tx_id: str, user_id: str, messages_json: str, created_at: datetime) -> None:

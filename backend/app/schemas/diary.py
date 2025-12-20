@@ -16,26 +16,26 @@ class ChatStreamRequest(BaseModel):
     )
 
 
-class GenerateReportRequest(BaseModel):
+class GenerateDiaryRequest(BaseModel):
     tx_id: str
     messages: List[ChatMessage] = Field(default_factory=list)
 
 
-class GenerateReportResponse(BaseModel):
-    report_title: str
-    report_body: str
+class GenerateDiaryResponse(BaseModel):
+    diary_title: str
+    diary_body: str
 
 
-class SaveReportRequest(BaseModel):
+class SaveDiaryRequest(BaseModel):
     tx_id: str
-    report_title: str
-    report_body: str
+    diary_title: str
+    diary_body: str
 
 
-class SaveReportResponse(BaseModel):
+class SaveDiaryResponse(BaseModel):
     event_name: str
-    report_title: str
-    report_body: str
+    diary_title: str
+    diary_body: str
     created_at: datetime
     user_id: str
 

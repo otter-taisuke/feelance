@@ -18,7 +18,7 @@ type Props = {
   onNew: () => void;
   onDelete?: () => void;
   onSelectTx: (tx: Transaction) => void;
-  onReportExisting?: () => void;
+  onDiaryExisting?: () => void;
   onClose: () => void;
   formatYen: (v: number) => string;
 };
@@ -36,7 +36,7 @@ export function DayModal({
   onNew,
   onDelete,
   onSelectTx,
-  onReportExisting,
+  onDiaryExisting,
   onClose,
   formatYen,
 }: Props) {
@@ -156,10 +156,10 @@ export function DayModal({
               >
                 編集する
               </button>
-              {onReportExisting && (
+              {onDiaryExisting && (
                 <button
                   className="rounded bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
-                  onClick={onReportExisting}
+                  onClick={onDiaryExisting}
                   disabled={saving}
                 >
                   日記作成
