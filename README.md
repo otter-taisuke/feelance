@@ -16,6 +16,10 @@
 ```
 OPENAI_API_KEY=sk-********                   # 必須: OpenAI キー
 OPENAI_MODEL=gpt-4o-mini                    # 任意: 利用モデル
+ALLOW_ORIGINS=http://localhost:3000         # CORS 許可オリジン（カンマ区切り可）
+SESSION_SECRET=change-me-session-secret     # Cookie 署名用シークレット
+SESSION_COOKIE_NAME=feelance_session        # Cookie 名
+SESSION_MAX_AGE=604800                      # Cookie 有効秒数（デフォルト 7 日）
 ```
 
 ### frontend/.env.local
@@ -46,4 +50,3 @@ pnpm dev    # http://localhost:3000
 ## よくあるトラブル
 - OpenAI キー未設定: 日記生成/チャットで 500 エラーになります。`backend/.env` を確認してください。
 - CORS エラー: `ALLOW_ORIGINS` にフロント URL を追加してください（カンマ区切り）。
-

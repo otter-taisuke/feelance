@@ -6,6 +6,7 @@ import type {
   SaveDiaryResponse,
   Transaction,
   TransactionForm,
+  RetrospectiveSummary,
   User,
 } from "./types";
 
@@ -254,6 +255,23 @@ export async function fetchDiaries(params?: {
 
   const qs = searchParams.toString();
   const url = qs ? `${API_BASE}/diary?${qs}` : `${API_BASE}/diary`;
+
+  const res = await fetch(url, {
+    credentials: "include",
+  });
+  if (!res.ok) {
+    await handleError(res);
+  }
+  return res.json();
+}
+
+export async function fetchRetrospectiveSummary(months: number = 12): Promise<RetrospectiveSummary> {
+  const searchParams = new URLSearchParams();
+  if (months && Number.isFinite(months)) {
+    searchParams.set("months", String(months));
+  }
+  const qs = searchParams.toString();
+  const url = qs ? `${API_BASE}/retrospective/summary?${qs}` : `${API_BASE}/retrospective/summary`;
 
   const res = await fetch(url, {
     credentials: "include",

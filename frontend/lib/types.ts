@@ -60,3 +60,41 @@ export type DiaryEntry = {
   user_id: string;
 };
 
+export type RetrospectiveDiary = {
+  diary_id: string;
+  event_id: string;
+  title: string;
+  date: string;
+  amount: number;
+  sentiment: number;
+  content: string;
+};
+
+export type RetrospectiveEvent = {
+  event_id: string;
+  title: string;
+  date: string;
+  amount: number;
+  sentiment: number;
+  has_diary: boolean;
+  diary_id?: string | null;
+};
+
+export type EmotionBucket = {
+  label: string;
+  count: number;
+};
+
+export type RetrospectiveSummary = {
+  happy_money_top3_diaries: RetrospectiveDiary[];
+  happy_money_worst3_diaries: RetrospectiveDiary[];
+  yearly_happy_money_top3: RetrospectiveEvent[];
+  yearly_happy_money_worst3: RetrospectiveEvent[];
+  emotion_buckets: EmotionBucket[];
+  summary_text: string;
+  diary_top_insufficient: boolean;
+  diary_worst_insufficient: boolean;
+  event_top_insufficient: boolean;
+  event_worst_insufficient: boolean;
+};
+

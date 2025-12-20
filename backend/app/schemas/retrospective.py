@@ -35,4 +35,9 @@ class RetrospectiveSummary(BaseModel):
     yearly_happy_money_top3: List[RetrospectiveEvent]
     yearly_happy_money_worst3: List[RetrospectiveEvent]
     emotion_buckets: List[EmotionBucket]
+    summary_text: str
+    diary_top_insufficient: bool = False
+    diary_worst_insufficient: bool = False
+    event_top_insufficient: bool = False
+    event_worst_insufficient: bool = False
 
