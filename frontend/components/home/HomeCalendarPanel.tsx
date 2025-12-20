@@ -583,7 +583,7 @@ export function HomeCalendarPanel({ user }: HomeCalendarPanelProps) {
       <DiarySelectEventModal
         open={showDiarySelectModal}
         selectedDate={selectedDate}
-        events={events}
+        transactions={transactions}
         onSelectEvent={(eventId) => {
           setShowDiarySelectModal(false);
           router.push(`/diary/create?tx_id=${eventId}`);
