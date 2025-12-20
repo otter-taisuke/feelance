@@ -24,6 +24,8 @@ const formatDateLabel = (iso?: string | null) => {
 const formatMonthLabel = (d: Date) =>
   d.toLocaleDateString("ja-JP", { year: "numeric", month: "long" });
 
+type ViewMode = "month" | "year";
+
 export function DiaryListPanel({ variant = "standalone", user: externalUser = null }: DiaryListPanelProps) {
   const useExternalAuth = variant === "embedded";
 
@@ -36,6 +38,7 @@ export function DiaryListPanel({ variant = "standalone", user: externalUser = nu
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
+  const [viewMode, setViewMode] = useState<ViewMode>("month");
   const [pickerOpen, setPickerOpen] = useState(false);
   const [draftYear, setDraftYear] = useState<number | null>(null);
   const [draftMonth, setDraftMonth] = useState<number | null>(null);
@@ -114,7 +117,9 @@ export function DiaryListPanel({ variant = "standalone", user: externalUser = nu
 
         if (!hasSearchFilters) {
           params.year = currentYear;
-          params.month = currentMonth;
+          if (viewMode === "month") {
+            params.month = currentMonth;
+          }
         }
 
         const min = parseNumberInput(priceMinInput);
@@ -132,7 +137,17 @@ export function DiaryListPanel({ variant = "standalone", user: externalUser = nu
       }
     };
     run();
-  }, [user, currentYear, currentMonth, hasSearchFilters, priceMinInput, priceMaxInput, sentiment, keyword]);
+  }, [
+    user,
+    currentYear,
+    currentMonth,
+    viewMode,
+    hasSearchFilters,
+    priceMinInput,
+    priceMaxInput,
+    sentiment,
+    keyword,
+  ]);
 
   const handleLogin = async () => {
     if (useExternalAuth) return;
@@ -165,7 +180,8 @@ export function DiaryListPanel({ variant = "standalone", user: externalUser = nu
   };
 
   const moveMonth = (delta: number) => {
-    const target = new Date(currentYear, currentMonth - 1 + delta, 1);
+    const step = viewMode === "year" ? 12 : 1;
+    const target = new Date(currentYear, currentMonth - 1 + delta * step, 1);
     setViewDate(target);
   };
 
@@ -202,12 +218,19 @@ export function DiaryListPanel({ variant = "standalone", user: externalUser = nu
     setSentiment(null);
   };
 
+  const periodLabel = useMemo(
+    () => (viewMode === "month" ? formatMonthLabel(viewDate) : `${currentYear}年`),
+    [currentYear, viewDate, viewMode],
+  );
+
+  const emptyMessage = viewMode === "month" ? "この月の日記はまだありません" : "この年の日記はまだありません";
+
   const bodyContent = (
     <div className="rounded-lg bg-white p-6 shadow-sm space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-col gap-1">
           <h1 className="text-2xl font-bold">日記一覧</h1>
-          <p className="text-sm text-zinc-600">作成済みの日記を月別に閲覧できます</p>
+          <p className="text-sm text-zinc-600">作成済みの日記を月別・年別に閲覧できます</p>
         </div>
         {!useExternalAuth && (
           <div className="flex items-center gap-2">
@@ -237,30 +260,49 @@ export function DiaryListPanel({ variant = "standalone", user: externalUser = nu
         )
       ) : (
         <>
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-zinc-200 bg-white px-4 py-3 shadow-sm">
-            <div className="flex items-center gap-3">
+          <div className="flex flex-col items-center justify-center gap-2 px-2 py-2">
+            <div className="flex items-center gap-2">
               <button
-                className="rounded border border-zinc-300 px-2 py-1 text-sm hover:border-zinc-500"
+                className="flex h-9 w-9 items-center justify-center rounded border border-zinc-300 text-base hover:border-zinc-500"
                 onClick={() => moveMonth(-1)}
               >
-                ← 先月
+                ←
               </button>
               <button
-                className="rounded border border-zinc-300 px-3 py-2 text-base font-semibold hover:border-zinc-500"
+                className="rounded px-3 py-2 text-base font-semibold"
                 onClick={openPicker}
               >
-                {formatMonthLabel(viewDate)}
+                {periodLabel}
               </button>
               <button
-                className="rounded border border-zinc-300 px-2 py-1 text-sm hover:border-zinc-500"
+                className="flex h-9 w-9 items-center justify-center rounded border border-zinc-300 text-base hover:border-zinc-500"
                 onClick={() => moveMonth(1)}
               >
-                来月 →
+                →
               </button>
             </div>
-          <div className="text-sm text-zinc-500">
-            {useAllTime ? "フィルター/検索中は全期間が対象になります" : "クリックで年月選択"}
-          </div>
+            <div className="flex items-center justify-center gap-2">
+              <button
+                className={`rounded border px-3 py-1 text-sm ${
+                  viewMode === "month"
+                    ? "border-black bg-black text-white"
+                    : "border-zinc-300 text-zinc-700 hover:border-zinc-500"
+                }`}
+                onClick={() => setViewMode("month")}
+              >
+                月別
+              </button>
+              <button
+                className={`rounded border px-3 py-1 text-sm ${
+                  viewMode === "year"
+                    ? "border-black bg-black text-white"
+                    : "border-zinc-300 text-zinc-700 hover:border-zinc-500"
+                }`}
+                onClick={() => setViewMode("year")}
+              >
+                年別
+              </button>
+            </div>
           </div>
 
           {pickerOpen && (
@@ -322,7 +364,7 @@ export function DiaryListPanel({ variant = "standalone", user: externalUser = nu
                     useAllTime ? "bg-black text-white" : "bg-zinc-100 text-zinc-700"
                   }`}
                 >
-                  {useAllTime ? "全期間を検索" : `${currentYear}年${currentMonth}月`}
+                  {useAllTime ? "全期間を検索" : viewMode === "month" ? `${currentYear}年${currentMonth}月` : `${currentYear}年`}
                 </div>
                 <button
                   type="button"
@@ -461,7 +503,7 @@ export function DiaryListPanel({ variant = "standalone", user: externalUser = nu
             </div>
           ) : filteredDiaries.length === 0 ? (
             <div className="rounded-lg border border-zinc-200 bg-white px-4 py-6 text-center text-sm text-zinc-600 shadow-sm">
-              この月の日記はまだありません
+              {emptyMessage}
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 auto-rows-[340px]">
