@@ -1,7 +1,8 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
+  /* 温かみのあるカフェラテ系ベースカラー */
+  --background: #f4eadf;
   --foreground: #171717;
 }
 
@@ -14,7 +15,7 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
+    --background: #0f0d0b;
     --foreground: #ededed;
   }
 }

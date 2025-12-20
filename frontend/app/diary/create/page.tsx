@@ -271,7 +271,7 @@ export default function CreateDiaryPage() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-50 text-zinc-900">
+    <div className="min-h-screen bg-[var(--background)] text-zinc-900">
       <div className="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-8">
         <header className="flex flex-col gap-2">
           <h1 className="text-2xl font-bold">日記作成</h1>

@@ -381,7 +381,7 @@ export default function Home() {
     );
 
   return (
-    <div className="min-h-screen bg-zinc-50 text-zinc-900">
+    <div className="min-h-screen bg-[var(--background)] text-zinc-900">
       <div className="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-8">
         <header className="flex items-center justify-between gap-4">
           <div className="flex flex-col gap-2">
@@ -397,12 +397,12 @@ export default function Home() {
               </span>
               <Link
                 href="/diary"
-                className="rounded border border-zinc-300 px-3 py-1 text-sm text-zinc-700 hover:border-zinc-500"
+                className="rounded border border-zinc-300 bg-white px-3 py-1 text-sm text-zinc-700 hover:border-zinc-500"
               >
                 日記一覧へ
               </Link>
               <button
-                className="rounded border border-zinc-300 px-3 py-1 text-sm text-zinc-700 hover:border-zinc-500 disabled:opacity-50"
+                className="rounded border border-zinc-300 bg-white px-3 py-1 text-sm text-zinc-700 hover:border-zinc-500 disabled:opacity-50"
                 onClick={handleLogout}
                 disabled={authLoading}
               >
