@@ -173,7 +173,7 @@ export function DayModal({
                         <span className="font-medium">{tx.item}</span>
                         <div className="flex flex-col items-end">
                           <span className="text-sm text-zinc-600 whitespace-nowrap">
-                            {tx.happy_amount >= 0 ? "+" : ""}{tx.happy_amount.toLocaleString("ja-JP")}
+                            {tx.happy_amount >= 0 ? "+" : ""}{tx.happy_amount.toLocaleString("ja-JP")}♡
                           </span>
                           <span className="text-xs text-zinc-500">{formatYen(tx.amount)}</span>
                         </div>

@@ -135,7 +135,7 @@ export function HomeCalendarPanel({ user, selectedMonth, onChangeMonth }: HomeCa
     () =>
       transactions.map((t) => ({
         id: t.id,
-        title: `${t.happy_amount >= 0 ? "+" : ""}${t.happy_amount.toLocaleString("ja-JP")}`,
+        title: `${t.happy_amount >= 0 ? "+" : ""}${t.happy_amount.toLocaleString("ja-JP")}♡`,
         start: t.date,
         color: t.mood_score === 0 ? HAPPY_NEUTRAL_COLOR : t.happy_amount < 0 ? HAPPY_NEGATIVE_COLOR : HAPPY_POSITIVE_COLOR,
         textColor: t.mood_score === 0 ? HAPPY_NEUTRAL_TEXT_COLOR : "#fff",
@@ -357,12 +357,6 @@ export function HomeCalendarPanel({ user, selectedMonth, onChangeMonth }: HomeCa
     const sign = v > 0 ? "+" : v < 0 ? "-" : "";
     const absTruncated = Math.trunc(Math.abs(v));
     return `${sign}${absTruncated.toLocaleString("ja-JP")}`;
-  };
-
-  const formatYenSigned = (v: number) => {
-    const sign = v > 0 ? "+" : v < 0 ? "-" : "";
-    const absValue = Math.abs(v);
-    return `￥${sign}${absValue.toLocaleString("ja-JP")}`;
   };
 
   const resetForm = (dateStr: string) => {
@@ -624,7 +618,7 @@ export function HomeCalendarPanel({ user, selectedMonth, onChangeMonth }: HomeCa
                     : "text-zinc-700"
               }`}
             >
-              {formatYenSigned(happyStats.total)}
+              {formatSigned(happyStats.total)}♡
             </span>
           </div>
         </div>
