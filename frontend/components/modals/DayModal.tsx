@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import type { MoodOption, Transaction, TransactionForm as FormState } from "@/lib/types";
 
+import { HappyChan } from "@/components/common/HappyChan";
 import { TransactionForm } from "../forms/TransactionForm";
 
 type Props = {
@@ -126,7 +127,10 @@ export function DayModal({
                 </div>
                 <div className="max-h-80 space-y-2 overflow-y-auto rounded border border-zinc-200 p-2">
                   {dayTransactions.length === 0 && (
-                    <p className="text-sm text-zinc-500">まだ登録がありません</p>
+                    <div className="flex flex-col items-center justify-center gap-3 py-8">
+                      <HappyChan size="medium" />
+                      <p className="text-sm text-zinc-500">まだ登録がありません</p>
+                    </div>
                   )}
                   {dayTransactions.map((tx) => {
                     const isSelected = form.id === tx.id;
