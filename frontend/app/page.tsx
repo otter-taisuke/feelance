@@ -63,8 +63,9 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-[var(--background)] text-zinc-900">
       <AppHeader user={user ?? null} onLogout={user ? handleLogout : undefined} />
-      <div className="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-8">
-        {!user && (
+
+      {!user && (
+        <div className="mx-auto max-w-2xl px-4 py-8">
           <LoginPanel
             userIdInput={userIdInput}
             onChange={setUserIdInput}
@@ -72,34 +73,38 @@ export default function Home() {
             loading={authLoading}
             error={error}
           />
-        )}
+        </div>
+      )}
 
-        <div className="rounded-lg bg-white p-2 shadow-sm">
-          <div className="flex gap-2">
-            {(["calendar", "diary"] as TabKey[]).map((key) => (
-              <button
-                key={key}
-                className={`flex-1 rounded px-4 py-2 text-sm font-semibold ${
-                  activeTab === key
-                    ? "bg-black text-white"
-                    : "bg-white text-zinc-700 hover:bg-zinc-100"
-                }`}
-                onClick={() => setActiveTab(key)}
-              >
-                {key === "calendar" ? "カレンダー" : "日記一覧"}
-              </button>
-            ))}
+      {user && (
+        <div className="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-8">
+          <div className="rounded-lg bg-white p-2 shadow-sm">
+            <div className="flex gap-2">
+              {(["calendar", "diary"] as TabKey[]).map((key) => (
+                <button
+                  key={key}
+                  className={`flex-1 rounded px-4 py-2 text-sm font-semibold ${
+                    activeTab === key
+                      ? "bg-black text-white"
+                      : "bg-white text-zinc-700 hover:bg-zinc-100"
+                  }`}
+                  onClick={() => setActiveTab(key)}
+                >
+                  {key === "calendar" ? "カレンダー" : "日記一覧"}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            {activeTab === "calendar" ? (
+              <HomeCalendarPanel user={user} />
+            ) : (
+              <DiaryListPanel variant="embedded" user={user} />
+            )}
           </div>
         </div>
-
-        <div>
-          {activeTab === "calendar" ? (
-            <HomeCalendarPanel user={user} />
-          ) : (
-            <DiaryListPanel variant="embedded" user={user} />
-          )}
-        </div>
-      </div>
+      )}
     </div>
   );
 }
