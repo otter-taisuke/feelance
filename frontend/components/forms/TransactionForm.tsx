@@ -28,7 +28,24 @@ export function TransactionForm({
   error,
   cancelLabel,
 }: Props) {
-  const moodScale = [-2, -1, 0, 1, 2];
+  const fallbackMoodOptions: MoodOption[] = [
+    { value: -2, label: "最悪" },
+    { value: -1, label: "やや悪" },
+    { value: 0, label: "普通" },
+    { value: 1, label: "やや良" },
+    { value: 2, label: "最高" },
+  ];
+  const moodButtonStyles: Record<
+    number,
+    { emoji: string; color: string; bgColor: string; borderColor: string }
+  > = {
+    [-2]: { emoji: "😢", color: "text-red-600", bgColor: "bg-red-100", borderColor: "border-red-300" },
+    [-1]: { emoji: "😟", color: "text-red-500", bgColor: "bg-red-50/30", borderColor: "border-red-300" },
+    [0]: { emoji: "😐", color: "text-gray-600", bgColor: "bg-gray-200", borderColor: "border-gray-300" },
+    [1]: { emoji: "😊", color: "text-blue-500", bgColor: "bg-blue-50/30", borderColor: "border-blue-300" },
+    [2]: { emoji: "😄", color: "text-blue-600", bgColor: "bg-blue-100", borderColor: "border-blue-300" },
+  };
+  const options = moodOptions.length > 0 ? moodOptions : fallbackMoodOptions;
   const prevFormIdRef = useRef<string | undefined>(form.id);
   const [showBird, setShowBird] = useState(false);
 
@@ -132,34 +149,33 @@ export function TransactionForm({
         <div>心の動き</div>
         <div className="mt-2 space-y-2" role="group" aria-label="心の動き">
           <div className="relative flex items-center gap-1">
-            {moodScale.map((value, idx) => {
-              const isSelected = form.mood_score === value;
-              const moodConfig = [
-                { emoji: "😢", label: "最悪", color: "text-red-600", bgColor: "bg-red-100", borderColor: "border-red-300" },
-                { emoji: "😟", label: "やや悪", color: "text-red-500", bgColor: "bg-red-50/30", borderColor: "border-red-300" },
-                { emoji: "😐", label: "普通", color: "text-gray-600", bgColor: "bg-gray-200", borderColor: "border-gray-300" },
-                { emoji: "😊", label: "やや良", color: "text-blue-500", bgColor: "bg-blue-50/30", borderColor: "border-blue-300" },
-                { emoji: "😄", label: "最高", color: "text-blue-600", bgColor: "bg-blue-100", borderColor: "border-blue-300" },
-              ];
-              const config = moodConfig[idx];
+            {options.map((option) => {
+              const isSelected = form.mood_score === option.value;
+              const config =
+                moodButtonStyles[option.value] ?? {
+                  emoji: "🙂",
+                  color: "text-zinc-600",
+                  bgColor: "bg-gray-100",
+                  borderColor: "border-gray-300",
+                };
               return (
                 <button
-                  key={value}
+                  key={option.value}
                   type="button"
                   className={`flex flex-1 flex-col items-center gap-0.5 rounded-lg border-2 px-1 py-1.5 transition-all focus:outline-none hover:scale-105 hover:z-10 ${
                     isSelected
                       ? `${config.bgColor} ${config.borderColor} border-2 shadow-sm`
                       : "border-zinc-200 bg-white hover:border-zinc-300"
                   }`}
-                  onClick={() => onChange({ mood_score: value })}
+                  onClick={() => onChange({ mood_score: option.value })}
                   aria-pressed={isSelected}
-                  aria-label={`${config.label}（${value}）`}
+                  aria-label={`${option.label}（${option.value}）`}
                 >
                   <span className={`text-2xl ${isSelected ? config.color : "text-zinc-400"}`}>
                     {config.emoji}
                   </span>
                   <span className={`text-[10px] font-medium ${isSelected ? config.color : "text-zinc-500"}`}>
-                    {config.label}
+                    {option.label}
                   </span>
                 </button>
               );
