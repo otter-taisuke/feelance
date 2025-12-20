@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { MoodOption, TransactionForm as FormState } from "@/lib/types";
 import { HappyChan } from "@/components/common/HappyChan";
 
@@ -48,6 +48,9 @@ export function TransactionForm({
   };
   const options = moodOptions.length > 0 ? moodOptions : fallbackMoodOptions;
   const prevFormIdRef = useRef<string | undefined>(form.id);
+  const prevSavingRef = useRef<boolean>(saving);
+  const saveIntentRef = useRef(false);
+  const happyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [showHappyChan, setShowHappyChan] = useState(false);
 
   // YYYY-MM-DD形式をyyyy/mm/dd形式に変換
@@ -145,19 +148,45 @@ export function TransactionForm({
     return messageList[randomIndex];
   };
 
+  const startHappyChan = useCallback(() => {
+    setShowHappyChan(true);
+    if (happyTimerRef.current) {
+      clearTimeout(happyTimerRef.current);
+    }
+    happyTimerRef.current = setTimeout(() => {
+      setShowHappyChan(false);
+    }, 3000);
+  }, []);
+
   // 新規追加成功時にハッピーちゃんを表示
   useEffect(() => {
     // 前回はidが無く、今回idが設定された場合（新規追加成功）
     if (!prevFormIdRef.current && form.id) {
-      setShowHappyChan(true);
-      // 3秒後に自動で非表示
-      const timer = setTimeout(() => {
-        setShowHappyChan(false);
-      }, 3000);
-      return () => clearTimeout(timer);
+      startHappyChan();
     }
     prevFormIdRef.current = form.id;
-  }, [form.id]);
+  }, [form.id, startHappyChan]);
+
+  // 編集保存完了時にもハッピーちゃんを表示（savingがtrue→false、エラーなし）
+  useEffect(() => {
+    if (prevSavingRef.current && !saving && !error && form.id && saveIntentRef.current) {
+      startHappyChan();
+    }
+    if (!saving) {
+      saveIntentRef.current = false;
+    }
+    prevSavingRef.current = saving;
+  }, [saving, error, form.id, startHappyChan]);
+
+  // タイマーのクリーンアップ
+  useEffect(
+    () => () => {
+      if (happyTimerRef.current) {
+        clearTimeout(happyTimerRef.current);
+      }
+    },
+    [],
+  );
 
   return (
     <div className="space-y-3">
@@ -254,7 +283,10 @@ export function TransactionForm({
       <div className="flex items-center gap-2">
         <button
           className="rounded bg-black px-4 py-2 text-sm text-white disabled:opacity-50 min-w-[100px]"
-          onClick={onSave}
+          onClick={() => {
+            saveIntentRef.current = true;
+            onSave();
+          }}
           disabled={saving}
         >
           {saving ? "保存中..." : form.id ? "更新する" : "追加する"}
