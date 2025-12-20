@@ -382,11 +382,27 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-zinc-50 text-zinc-900">
       <div className="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-8">
-        <header className="flex flex-col gap-2">
-          <h1 className="text-2xl font-bold">Feelance</h1>
-          <p className="text-sm text-zinc-600">
-            家計簿＋感情スコアでHappy Moneyを可視化
-          </p>
+        <header className="flex items-center justify-between gap-4">
+          <div className="flex flex-col gap-2">
+            <h1 className="text-2xl font-bold">Feelance</h1>
+            <p className="text-sm text-zinc-600">
+              家計簿＋感情スコアでHappy Moneyを可視化
+            </p>
+          </div>
+          {user && (
+            <div className="flex items-center gap-3">
+              <span className="text-lg font-semibold">
+                {user.display_name || user.user_id}
+              </span>
+              <button
+                className="rounded border border-zinc-300 px-3 py-1 text-sm text-zinc-700 hover:border-zinc-500 disabled:opacity-50"
+                onClick={handleLogout}
+                disabled={authLoading}
+              >
+                ログアウト
+              </button>
+            </div>
+          )}
         </header>
 
         {!user && (
@@ -401,26 +417,6 @@ export default function Home() {
 
         {user && (
           <>
-            <div className="flex flex-col gap-2 rounded-lg bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="text-sm text-zinc-600">ユーザー</p>
-                <p className="text-lg font-semibold">
-                  {user.display_name || user.user_id}
-                </p>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className="text-sm text-zinc-500">
-                  取引: {loading ? "取得中..." : `${transactions.length}件`}
-                </div>
-                <button
-                  className="rounded border border-zinc-300 px-3 py-1 text-sm text-zinc-700 hover:border-zinc-500 disabled:opacity-50"
-                  onClick={handleLogout}
-                  disabled={authLoading}
-                >
-                  ログアウト
-                </button>
-              </div>
-            </div>
 
             <div className="rounded-lg bg-white p-4 shadow-sm">
               <div className="mb-3 flex items-center justify-between">
