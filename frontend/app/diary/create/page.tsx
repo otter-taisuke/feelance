@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
+import { AppHeader } from "@/components/layout/AppHeader";
 import {
   generateDiary,
   getTransaction,
@@ -281,7 +282,8 @@ export default function CreateDiaryPage() {
 
   return (
     <div className="min-h-screen bg-[var(--background)] text-zinc-900">
-      <div className="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-8">
+      <AppHeader />
+      <main className="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-8">
         <header className="flex flex-col gap-2">
           <h1 className="text-2xl font-bold">日記作成</h1>
           <p className="text-sm text-zinc-600">
@@ -414,7 +416,7 @@ export default function CreateDiaryPage() {
             {notice && <p className="text-sm text-blue-700">{notice}</p>}
           </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 }
