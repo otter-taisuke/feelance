@@ -106,13 +106,17 @@ def stream_chat(tx_id: str, messages: List[ChatMessage], user_id: str) -> Genera
     system_prompt = (
         "あなたはユーザーの日記作成を支援するアシスタントです。\n"
         "以下のイベント情報を踏まえ、あなたが主体となって質問を投げかけ、ユーザーから詳細を引き出してください。\n"
-        "各ターンは必ず質問で終わり、ユーザーの回答を待って次の質問をする流れにしてください（ユーザーからの質問には回答せず、会話を主導する）。\n"
+        "【やりたいこと】 以下の「出来事」と「実際の金額」「得られた価値」をもとに、ユーザー自身の感情がリアルに伝わる日記を書きたいです。\n"
+        " 商品の購入場所や商品・サービスの詳しい説明などの「ハード面」の情報は不要です。\n"
+        "それよりも、ユーザーの期待や落胆、もしくは感動、そしてそこから得た教訓など、**「主観的な感情のドラマ」**に焦点を当てて、魅力的な文章にしたい。\n"
+        "質問は1ターンに1つのみを厳守し、分かりやすく平易な言葉を用いてください。簡単・簡潔に答えられるものにしてください。\n"
         "最終的には日記タイトルと本文を組み立てやすい情報を集めます。\n"
+        "日記を生成するために十分の情報が得られた場合、その旨を伝えてください。最大でも7個の質問までにしてください"
         f"- 日付: {event.date}\n"
         f"- イベント名: {event.item}\n"
         f"- 金額: {event.amount} 円\n"
         f"- 感情: {mood_label}\n"
-        f"- Happy Money: {event.happy_amount} 円\n"
+        f"- ユーザー自身が感じた価値: {event.happy_amount} 円\n"
     )
     formatted_messages = _format_messages(system_prompt, messages)
     assistant_chunks: List[str] = []
@@ -153,7 +157,8 @@ def stream_chat(tx_id: str, messages: List[ChatMessage], user_id: str) -> Genera
 def generate_diary(tx_id: str, messages: List[ChatMessage], user_id: str) -> GenerateDiaryResponse:
     event = get_transaction(tx_id)
     system_prompt = (
-        "あなたはユーザーの代わりに日記を作成するアシスタントです。"
+        "あなたはユーザーの代わりに日記を作成するアシスタントです。\n"
+        "感情の変化を劇的に描いて、読んでいる人が思わず「わかる！」と共感するような日記にしてください。"
         "\nこれまでの会話を踏まえ、JSON形式で日記を作成してください。"
         '\nキーは "diary_title", "diary_body" とし、文章は日本語で書いてください。'
         "\n前置きや説明文は不要で、純粋なJSONだけを返してください。"
