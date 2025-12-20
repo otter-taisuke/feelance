@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import type { MoodOption, TransactionForm as FormState } from "@/lib/types";
 
 type Props = {
@@ -28,6 +29,51 @@ export function TransactionForm({
   cancelLabel,
 }: Props) {
   const moodScale = [-2, -1, 0, 1, 2];
+  const prevFormIdRef = useRef<string | undefined>(form.id);
+  const [showBird, setShowBird] = useState(false);
+
+  // YYYY-MM-DD形式をyyyy/mm/dd形式に変換
+  const formatDateForDisplay = (dateStr: string): string => {
+    if (!dateStr) return "";
+    const [year, month, day] = dateStr.split("-");
+    return `${year}/${month}/${day}`;
+  };
+
+  // yyyy/mm/dd形式をYYYY-MM-DD形式に変換
+  const parseDateFromInput = (inputStr: string): string => {
+    if (!inputStr) return "";
+    // スラッシュをハイフンに置換し、YYYY-MM-DD形式に変換
+    const normalized = inputStr.replace(/\//g, "-");
+    const parts = normalized.split("-");
+    if (parts.length === 3) {
+      const year = parts[0].padStart(4, "0");
+      const month = parts[1].padStart(2, "0");
+      const day = parts[2].padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    }
+    return inputStr;
+  };
+
+  const [dateDisplayValue, setDateDisplayValue] = useState(formatDateForDisplay(form.date));
+
+  // form.dateが変更されたときに表示値を更新
+  useEffect(() => {
+    setDateDisplayValue(formatDateForDisplay(form.date));
+  }, [form.date]);
+
+  // 新規追加成功時に鳥を表示
+  useEffect(() => {
+    // 前回はidが無く、今回idが設定された場合（新規追加成功）
+    if (!prevFormIdRef.current && form.id) {
+      setShowBird(true);
+      // 3秒後に自動で非表示
+      const timer = setTimeout(() => {
+        setShowBird(false);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+    prevFormIdRef.current = form.id;
+  }, [form.id]);
 
   return (
     <div className="space-y-3">
@@ -38,15 +84,27 @@ export function TransactionForm({
         {form.id && <span className="rounded bg-blue-50 px-2 py-1 text-xs text-blue-700">ID: {form.id}</span>}
       </div>
 
-      <label className="block text-sm font-medium text-zinc-700">
-        日付
-        <input
-          type="date"
-          className="mt-1 w-full rounded border border-zinc-300 p-2"
-          value={form.date}
-          onChange={(e) => onChange({ date: e.target.value })}
-        />
-      </label>
+      {form.id && (
+        <label className="block text-sm font-medium text-zinc-700">
+          日付
+          <input
+            type="text"
+            className="mt-1 w-full rounded border border-zinc-300 p-2"
+            value={dateDisplayValue}
+            onChange={(e) => {
+              const inputValue = e.target.value;
+              setDateDisplayValue(inputValue);
+              // 入力値をYYYY-MM-DD形式に変換して保存
+              const parsedDate = parseDateFromInput(inputValue);
+              if (parsedDate) {
+                onChange({ date: parsedDate });
+              }
+            }}
+            placeholder="yyyy/mm/dd"
+            pattern="\d{4}/\d{2}/\d{2}"
+          />
+        </label>
+      )}
 
       <label className="block text-sm font-medium text-zinc-700">
         商品名
@@ -112,7 +170,7 @@ export function TransactionForm({
 
       <div className="flex items-center gap-2">
         <button
-          className="rounded bg-black px-4 py-2 text-sm text-white disabled:opacity-50"
+          className="rounded bg-black px-4 py-2 text-sm text-white disabled:opacity-50 min-w-[100px]"
           onClick={onSave}
           disabled={saving}
         >
@@ -139,15 +197,48 @@ export function TransactionForm({
         )}
         {form.id && onDelete && (
           <button
-            className="text-sm text-red-600"
+            className="ml-auto rounded bg-red-600 px-4 py-2 text-sm text-white hover:bg-red-700 disabled:opacity-50 min-w-[100px]"
             onClick={onDelete}
             type="button"
+            disabled={saving}
           >
             削除
           </button>
         )}
       </div>
       {error && <p className="text-sm text-red-500">{error}</p>}
+      
+      {/* 鳥のアニメーション */}
+      {showBird && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
+          <div className="animate-bounce">
+            <div className="flex flex-col items-center gap-2 bg-white rounded-lg shadow-lg p-6 border-2 border-blue-200">
+              <div className="relative w-32 h-32 flex items-center justify-center">
+                <img
+                  src="/bird.png"
+                  alt="鳥"
+                  className="w-32 h-32 object-contain"
+                  onError={(e) => {
+                    // 画像が読み込めない場合は非表示にして絵文字を表示
+                    const parent = e.currentTarget.parentElement;
+                    if (parent) {
+                      e.currentTarget.style.display = "none";
+                      const fallback = parent.querySelector(".bird-emoji-fallback") as HTMLElement;
+                      if (fallback) {
+                        fallback.style.display = "flex";
+                      }
+                    }
+                  }}
+                />
+                <div className="absolute inset-0 flex items-center justify-center text-8xl bird-emoji-fallback" style={{ display: "none" }}>
+                  🐦
+                </div>
+              </div>
+              <p className="text-xl font-bold text-blue-600">良かったね！</p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
