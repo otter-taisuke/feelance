@@ -49,6 +49,7 @@ export default function Home() {
   const [selectedDate, setSelectedDate] = useState<string>(() => getToday());
   const [showModal, setShowModal] = useState(false);
   const [showReportSelectModal, setShowReportSelectModal] = useState(false);
+  const [startInEventList, setStartInEventList] = useState(false);
   const [statsYear, setStatsYear] = useState<number | null>(null); // 月別グラフ用
   const [statsPickerOpen, setStatsPickerOpen] = useState(false); // 日別グラフの年月ピッカー
   const [statsDraftYear, setStatsDraftYear] = useState<number | null>(null);
@@ -310,6 +311,8 @@ export default function Home() {
   const openModalForDate = (dateStr: string) => {
     setSelectedDate(dateStr);
     resetForm(dateStr);
+    const hasEventsForDate = transactions.some((t) => t.date === dateStr);
+    setStartInEventList(hasEventsForDate);
     setShowModal(true);
   };
 
@@ -356,13 +359,8 @@ export default function Home() {
     const target = transactions.find((t) => t.id === eventId);
     if (!target) return;
     setSelectedDate(target.date);
-    setForm({
-      id: target.id,
-      date: target.date,
-      item: target.item,
-      amount: String(target.amount),
-      mood_score: target.mood_score,
-    });
+    resetForm(target.date);
+    setStartInEventList(true);
     setShowModal(true);
   };
 
@@ -658,7 +656,11 @@ export default function Home() {
         onDelete={form.id ? () => handleDelete(form.id!) : undefined}
         onSelectTx={pickTransaction}
         onReportExisting={form.id ? handleReportExisting : undefined}
-        onClose={() => setShowModal(false)}
+        onClose={() => {
+          setShowModal(false);
+          setStartInEventList(false);
+        }}
+        startInEventList={startInEventList}
         formatYen={formatYen}
       />
       <ReportSelectEventModal
