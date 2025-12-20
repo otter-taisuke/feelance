@@ -15,7 +15,7 @@ type Props = {
   saving: boolean;
   error: string | null;
   onChangeForm: (changes: Partial<FormState>) => void;
-  onSave: () => void;
+  onSave: () => Promise<void> | void;
   onNew: () => void;
   onDelete?: () => void;
   onSelectTx: (tx: Transaction) => void;
@@ -267,9 +267,10 @@ export function DayModal({
                 form={form}
                 moodOptions={moodOptions}
                 onChange={onChangeForm}
-                onSave={() => {
-                  onSave();
-                  setShowEditModal(false);
+                onSave={async () => {
+                  await onSave();
+                  // ハッピーちゃん表示の3秒を待ってから閉じる
+                  setTimeout(() => setShowEditModal(false), 3200);
                 }}
                 onNew={() => setShowEditModal(false)}
                 onDelete={onDelete}
