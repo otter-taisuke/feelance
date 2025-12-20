@@ -375,7 +375,7 @@ export function HomeCalendarPanel({ user, selectedMonth, onChangeMonth }: HomeCa
       return;
     }
     if (!form.item || !form.amount || !form.date) {
-      setError("日付・商品名・金額は必須です");
+      setError("日付・イベント名・金額は必須です");
       return;
     }
     try {

@@ -31,12 +31,19 @@ class EmotionBucket(BaseModel):
     short_label: Optional[str] = None
 
 
+class DailyMood(BaseModel):
+    date: date
+    mood_score: int
+    count: int
+
+
 class RetrospectiveSummary(BaseModel):
     happy_money_top3_diaries: List[RetrospectiveDiary]
     happy_money_worst3_diaries: List[RetrospectiveDiary]
     yearly_happy_money_top3: List[RetrospectiveEvent]
     yearly_happy_money_worst3: List[RetrospectiveEvent]
     emotion_buckets: List[EmotionBucket]
+    daily_moods: List[DailyMood]
     summary_text: str
     diary_top_insufficient: bool = False
     diary_worst_insufficient: bool = False

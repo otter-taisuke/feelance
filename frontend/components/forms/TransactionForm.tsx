@@ -133,12 +133,12 @@ export function TransactionForm({
       )}
 
       <label className="block text-sm font-medium text-zinc-700">
-        商品名
+        イベント名
         <input
           className="mt-1 w-full rounded border border-zinc-300 p-2"
           value={form.item}
           onChange={(e) => onChange({ item: e.target.value })}
-          placeholder="例: コーヒー"
+          placeholder="例: うまいコーヒー"
         />
       </label>
 

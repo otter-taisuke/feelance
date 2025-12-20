@@ -8,6 +8,7 @@ from openai import OpenAI
 from app.repositories.csv_store import read_diary, read_transactions
 from app.repositories.summary_cache import read_summary_cache, write_summary_cache
 from app.schemas.retrospective import (
+    DailyMood,
     EmotionBucket,
     RetrospectiveDiary,
     RetrospectiveEvent,
@@ -46,6 +47,7 @@ def _default_summary() -> RetrospectiveSummary:
         yearly_happy_money_top3=[],
         yearly_happy_money_worst3=[],
         emotion_buckets=[],
+        daily_moods=[],
         summary_text="まだ日記付きのイベントがありませんっピィ。日記を書いてね！",
         diary_top_insufficient=True,
         diary_worst_insufficient=True,
@@ -124,6 +126,44 @@ def _fallback_summary_text(
         f"一番ハッピーだったのは「{top_title}」、一番しょんぼりは「{worst_title}」だったっピィ。"
         "この調子で日記を続けてね！"
     )
+
+
+def _build_daily_moods(tx_df: pd.DataFrame, start_date: date) -> List[DailyMood]:
+    """過去1年分の日単位ムードをGitHub草形式で使いやすい配列に整形"""
+    if tx_df.empty:
+        return []
+
+    # Pythonのdate型に揃えたキーで平均値と件数を持つ辞書を構築
+    mean_by_date: dict[date, int] = {}
+    count_by_date: dict[date, int] = {}
+
+    mood_means = (
+        tx_df.groupby("__date_only")["mood_score"]
+        .mean()
+        .apply(lambda v: int(round(max(min(v, 2), -2))))
+    )
+    for idx, val in mood_means.items():
+        key = idx.date() if hasattr(idx, "date") else idx
+        mean_by_date[key] = int(val)
+
+    mood_counts = tx_df["__date_only"].value_counts()
+    for idx, val in mood_counts.items():
+        key = idx.date() if hasattr(idx, "date") else idx
+        count_by_date[key] = int(val)
+
+    today = date.today()
+    daily: List[DailyMood] = []
+    current = start_date
+    while current <= today:
+        daily.append(
+            DailyMood(
+                date=current,
+                mood_score=mean_by_date.get(current, 0),
+                count=count_by_date.get(current, 0),
+            )
+        )
+        current += timedelta(days=1)
+    return daily
 
 
 def _format_diary_lines(diaries: List[RetrospectiveDiary], label: str) -> str:
@@ -307,12 +347,15 @@ def summarize_retrospective(user_id: str, months: int = 12) -> RetrospectiveSumm
         )
         write_summary_cache(user_id, months, summary_text)
 
+    daily_moods = _build_daily_moods(tx_df, start_date)
+
     return RetrospectiveSummary(
         happy_money_top3_diaries=diaries_top3,
         happy_money_worst3_diaries=diaries_worst3,
         yearly_happy_money_top3=events_top3,
         yearly_happy_money_worst3=events_worst3,
         emotion_buckets=buckets,
+        daily_moods=daily_moods,
         summary_text=summary_text,
         diary_top_insufficient=diary_top_insufficient,
         diary_worst_insufficient=diary_worst_insufficient,
