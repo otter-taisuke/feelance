@@ -39,10 +39,22 @@ export type DiaryGenerateResponse = {
 };
 
 export type SaveDiaryResponse = {
+  id: string;
   event_name: string;
   diary_title: string;
   diary_body: string;
+  transaction_date?: string;
   created_at: string;
+  user_id: string;
+};
+
+export type DiaryEntry = {
+  id: string;
+  event_name: string;
+  diary_title: string;
+  diary_body: string;
+  transaction_date?: string | null;
+  created_at?: string | null;
   user_id: string;
 };
 

@@ -1,15 +1,18 @@
+from typing import List, Optional
+
 from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse
 
 from app.routers.auth import _get_user_from_cookie
 from app.schemas.diary import (
     ChatStreamRequest,
+    DiaryEntry,
     GenerateDiaryRequest,
     GenerateDiaryResponse,
     SaveDiaryRequest,
     SaveDiaryResponse,
 )
-from app.services.diary import generate_diary, save_diary, stream_chat
+from app.services.diary import generate_diary, list_diaries, save_diary, stream_chat
 
 router = APIRouter(prefix="/diary", tags=["diary"])
 
@@ -40,10 +43,22 @@ def save(payload: SaveDiaryRequest, request: Request) -> SaveDiaryResponse:
     user = _get_user_from_cookie(request)
     saved = save_diary(payload.tx_id, payload.diary_title, payload.diary_body, user.user_id)
     return SaveDiaryResponse(
+        id=saved["id"],
         event_name=saved["event_name"],
         diary_title=saved["diary_title"],
         diary_body=saved["diary_body"],
+        transaction_date=saved["transaction_date"],
         created_at=saved["created_at"],
         user_id=saved["user_id"],
     )
+
+
+@router.get("", response_model=List[DiaryEntry])
+def list_diary(
+    request: Request,
+    year: Optional[int] = None,
+    month: Optional[int] = None,
+) -> List[DiaryEntry]:
+    user = _get_user_from_cookie(request)
+    return list_diaries(user.user_id, year=year, month=month)
 

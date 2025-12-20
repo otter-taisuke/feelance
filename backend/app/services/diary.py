@@ -3,7 +3,8 @@ import json
 import textwrap
 import logging
 from datetime import datetime
-from typing import Generator, Iterable, List
+from typing import Generator, Iterable, List, Optional
+from uuid import uuid4
 
 import pandas as pd
 from fastapi import HTTPException
@@ -12,7 +13,7 @@ from dotenv import load_dotenv
 
 from app.constants.mood import get_mood_label
 from app.repositories.csv_store import append_chat_log, read_diary, write_diary
-from app.schemas.diary import ChatMessage, GenerateDiaryResponse
+from app.schemas.diary import ChatMessage, DiaryEntry, GenerateDiaryResponse
 from app.services.transactions import get_transaction
 
 
@@ -245,14 +246,61 @@ def _parse_diary_content(content: str) -> GenerateDiaryResponse:
 def save_diary(tx_id: str, diary_title: str, diary_body: str, user_id: str) -> dict:
     event = get_transaction(tx_id)
     now = datetime.utcnow()
+    tx_date = getattr(event, "date", None)
+    tx_datetime: Optional[datetime] = None
+    if tx_date:
+        try:
+            tx_datetime = datetime.combine(tx_date, datetime.min.time())
+        except Exception:
+            tx_datetime = None
     df = read_diary()
     new_row = {
+        "id": str(uuid4()),
         "event_name": event.item,
         "diary_title": diary_title,
         "diary_body": diary_body,
+        "transaction_date": tx_datetime,
         "created_at": now,
         "user_id": user_id,
     }
     df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
     write_diary(df)
     return new_row
+
+
+def _row_to_entry(row) -> DiaryEntry:
+    def _to_dt(val: Optional[pd.Timestamp]) -> Optional[datetime]:
+        if pd.isna(val):
+            return None
+        return pd.to_datetime(val).to_pydatetime()
+
+    return DiaryEntry(
+        id=row["id"],
+        event_name=row["event_name"],
+        diary_title=row["diary_title"],
+        diary_body=row["diary_body"],
+        transaction_date=_to_dt(row.get("transaction_date")),
+        created_at=_to_dt(row.get("created_at")),
+        user_id=row["user_id"],
+    )
+
+
+def list_diaries(user_id: str, year: Optional[int] = None, month: Optional[int] = None) -> List[DiaryEntry]:
+    df = read_diary()
+    if df.empty:
+        return []
+    df = df[df["user_id"] == user_id].copy()
+
+    # transaction_dateを優先し、なければcreated_atを基準日として使う
+    df["effective_date"] = df["transaction_date"].fillna(df["created_at"])
+
+    if year is not None:
+        df = df[df["effective_date"].dt.year == int(year)]
+    if month is not None:
+        df = df[df["effective_date"].dt.month == int(month)]
+
+    if df.empty:
+        return []
+
+    df = df.sort_values(by=["effective_date", "created_at"], ascending=False)
+    return [_row_to_entry(row) for _, row in df.iterrows()]

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -394,6 +395,12 @@ export default function Home() {
               <span className="text-lg font-semibold">
                 {user.display_name || user.user_id}
               </span>
+              <Link
+                href="/diary"
+                className="rounded border border-zinc-300 px-3 py-1 text-sm text-zinc-700 hover:border-zinc-500"
+              >
+                日記一覧へ
+              </Link>
               <button
                 className="rounded border border-zinc-300 px-3 py-1 text-sm text-zinc-700 hover:border-zinc-500 disabled:opacity-50"
                 onClick={handleLogout}

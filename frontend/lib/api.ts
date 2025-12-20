@@ -1,6 +1,7 @@
 import { API_BASE } from "./constants";
 import type {
   ChatMessage,
+  DiaryEntry,
   DiaryGenerateResponse,
   SaveDiaryResponse,
   Transaction,
@@ -209,6 +210,25 @@ export async function saveDiary(
       diary_title: diaryTitle,
       diary_body: diaryBody,
     }),
+    credentials: "include",
+  });
+  if (!res.ok) {
+    await handleError(res);
+  }
+  return res.json();
+}
+
+export async function fetchDiaries(params?: {
+  year?: number | null;
+  month?: number | null;
+}): Promise<DiaryEntry[]> {
+  const searchParams = new URLSearchParams();
+  if (params?.year) searchParams.set("year", String(params.year));
+  if (params?.month) searchParams.set("month", String(params.month));
+  const qs = searchParams.toString();
+  const url = qs ? `${API_BASE}/diary?${qs}` : `${API_BASE}/diary`;
+
+  const res = await fetch(url, {
     credentials: "include",
   });
   if (!res.ok) {

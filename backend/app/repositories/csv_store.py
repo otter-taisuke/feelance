@@ -1,5 +1,6 @@
 from pathlib import Path
 from datetime import datetime
+from uuid import uuid4
 
 import pandas as pd
 
@@ -22,7 +23,7 @@ def ensure_data_files() -> None:
         )
     if not DIARY_FILE.exists():
         DIARY_FILE.write_text(
-            "event_name,diary_title,diary_body,created_at,user_id\n",
+            "id,event_name,diary_title,diary_body,transaction_date,created_at,user_id\n",
             encoding="utf-8",
         )
     if not CHAT_FILE.exists():
@@ -54,19 +55,55 @@ def write_transactions(df: pd.DataFrame) -> None:
 
 
 def read_diary() -> pd.DataFrame:
+    """日記CSVを読み込み、欠損列を補完し、IDと日付型を整える。"""
     ensure_data_files()
     df = pd.read_csv(
         DIARY_FILE,
         dtype={
+            "id": str,
             "event_name": str,
             "diary_title": str,
             "diary_body": str,
+            "transaction_date": str,
+            "created_at": str,
             "user_id": str,
         },
-        parse_dates=["created_at"],
+        keep_default_na=False,
     )
     if df.empty:
         return df
+
+    expected_cols = [
+        "id",
+        "event_name",
+        "diary_title",
+        "diary_body",
+        "transaction_date",
+        "created_at",
+        "user_id",
+    ]
+
+    changed = False
+    for col in expected_cols:
+        if col not in df.columns:
+            df[col] = ""
+            changed = True
+
+    # ID補完
+    missing_id = df["id"].astype(str).str.strip() == ""
+    if missing_id.any():
+        df.loc[missing_id, "id"] = [str(uuid4()) for _ in range(missing_id.sum())]
+        changed = True
+
+    # 日付型に変換（欠損はNaT）
+    df["transaction_date"] = pd.to_datetime(df["transaction_date"], errors="coerce")
+    df["created_at"] = pd.to_datetime(df["created_at"], errors="coerce")
+
+    # カラム順を固定
+    df = df[expected_cols]
+
+    if changed:
+        write_diary(df)
     return df
 
 

@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List, Literal
+from typing import List, Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -33,9 +33,21 @@ class SaveDiaryRequest(BaseModel):
 
 
 class SaveDiaryResponse(BaseModel):
+    id: str
     event_name: str
     diary_title: str
     diary_body: str
+    transaction_date: Optional[datetime]
     created_at: datetime
+    user_id: str
+
+
+class DiaryEntry(BaseModel):
+    id: str
+    event_name: str
+    diary_title: str
+    diary_body: str
+    transaction_date: Optional[datetime]
+    created_at: Optional[datetime]
     user_id: str
 
