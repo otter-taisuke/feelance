@@ -6,6 +6,7 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  LabelList,
   ReferenceLine,
   ResponsiveContainer,
   Tooltip,
@@ -189,6 +190,19 @@ export function HomeCalendarPanel({ user }: HomeCalendarPanelProps) {
     return { data, total, label: "全期間" };
   }, [granularity, selectedMonth, transactions, statsYear]);
 
+  const happyScaleDomain = useMemo<[number, number]>(() => {
+    if (happyStats.data.length === 0) {
+      return [0, 0];
+    }
+    const maxAbs = happyStats.data.reduce(
+      (max, entry) => Math.max(max, Math.abs(entry.positive), Math.abs(entry.negative)),
+      0,
+    );
+    const safeMax = maxAbs === 0 ? 1 : maxAbs;
+    const padded = safeMax * 1.3;
+    return [-padded, padded];
+  }, [happyStats.data]);
+
   useEffect(() => {
     if (granularity === "month") {
       if (statsYear === null) {
@@ -237,6 +251,31 @@ export function HomeCalendarPanel({ user }: HomeCalendarPanelProps) {
     if (happyStats.total < 0) return "border-red-300 bg-red-50 text-red-900";
     return "border-zinc-300 bg-zinc-100 text-zinc-700";
   }, [happyStats.total]);
+
+  const renderPositiveLabel = (props: any) => {
+    const { x, y, width, value } = props;
+    if (typeof value !== "number" || value <= 0) return null;
+    const centerX = (x ?? 0) + (width ?? 0) / 2;
+    const labelY = (y ?? 0) - 6; // 少し上に配置
+    return (
+      <text x={centerX} y={labelY} textAnchor="middle" fill={HAPPY_POSITIVE_COLOR} fontSize={12}>
+        {formatYenSigned(value)}
+      </text>
+    );
+  };
+
+  const renderNegativeLabel = (props: any) => {
+    const { x, y, width, height, value } = props;
+    if (typeof value !== "number" || value >= 0) return null;
+    const centerX = (x ?? 0) + (width ?? 0) / 2;
+    // 負のバーは下方向に伸びるため、上端(ゼロライン付近)の少し下に配置する
+    const labelY = (y ?? 0) + 12;
+    return (
+      <text x={centerX} y={labelY} textAnchor="middle" fill={HAPPY_NEGATIVE_COLOR} fontSize={12}>
+        {formatYenSigned(value)}
+      </text>
+    );
+  };
 
   const handleChangeGranularity = (g: Granularity) => {
     setGranularity(g);
@@ -528,12 +567,7 @@ export function HomeCalendarPanel({ user }: HomeCalendarPanelProps) {
                     return label;
                   }}
                 />
-                <YAxis
-                  domain={[
-                    (dataMin: number) => Math.min(0, dataMin),
-                    (dataMax: number) => Math.max(0, dataMax),
-                  ]}
-                />
+                <YAxis hide domain={happyScaleDomain} />
                 <Tooltip
                   formatter={(value) => formatYen(Number(value))}
                   labelFormatter={(label) => {
@@ -551,8 +585,12 @@ export function HomeCalendarPanel({ user }: HomeCalendarPanelProps) {
                   }}
                 />
                 <ReferenceLine y={0} stroke="#0f172a" />
-                <Bar dataKey="positive" stackId="happy" fill={HAPPY_POSITIVE_COLOR} name="プラス" />
-                <Bar dataKey="negative" stackId="happy" fill={HAPPY_NEGATIVE_COLOR} name="マイナス" />
+                <Bar dataKey="positive" stackId="happy" fill={HAPPY_POSITIVE_COLOR} name="プラス">
+                  <LabelList dataKey="positive" content={renderPositiveLabel} />
+                </Bar>
+                <Bar dataKey="negative" stackId="happy" fill={HAPPY_NEGATIVE_COLOR} name="マイナス">
+                  <LabelList dataKey="negative" content={renderNegativeLabel} />
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
           )}
