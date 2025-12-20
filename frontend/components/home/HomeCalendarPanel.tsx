@@ -473,7 +473,10 @@ export function HomeCalendarPanel({ user, selectedMonth, onChangeMonth }: HomeCa
           onDateClick={openModalForDate}
           onEventClick={handleEventClick}
           onMonthChange={(year, month) => {
-            const firstDayOfMonth = formatDateLocal(new Date(year, month, 1));
+            const monthStart = new Date(year, month, 1);
+            const monthStr = formatMonthParam(monthStart);
+            if (monthStr === selectedMonth) return;
+            const firstDayOfMonth = formatDateLocal(monthStart);
             setDateAndSyncMonth(firstDayOfMonth);
           }}
         />
