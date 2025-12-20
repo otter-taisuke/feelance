@@ -38,6 +38,7 @@ export default function CreateDiaryPage() {
   const [chat, setChat] = useState<ChatState>(initialChatState);
   const [input, setInput] = useState("");
   const abortRef = useRef<AbortController | null>(null);
+  const chatContainerRef = useRef<HTMLDivElement | null>(null);
 
   const [diaryTitle, setDiaryTitle] = useState("");
   const [diaryBody, setDiaryBody] = useState("");
@@ -199,10 +200,9 @@ export default function CreateDiaryPage() {
     setNotice(null);
     try {
       await saveDiary(txId, diaryTitle.trim(), diaryBody.trim());
-      setNotice("日記を保存しました");
+      router.push("/diary");
     } catch (e) {
       setNotice((e as Error).message || "保存に失敗しました");
-    } finally {
       setSaving(false);
     }
   };
@@ -265,6 +265,13 @@ export default function CreateDiaryPage() {
     }
   }, [storageKey, chat.messages, diaryTitle, diaryBody]);
 
+  // チャットの自動スクロール
+  useEffect(() => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
+  }, [chat.messages, chat.streamingAssistant]);
+
   if (!txId) {
     return (
       <div className="mx-auto max-w-4xl p-6">
@@ -293,41 +300,117 @@ export default function CreateDiaryPage() {
           <h2 className="text-lg font-semibold">選択されたイベント</h2>
           {loadingTx && <p className="text-sm text-zinc-500">読み込み中...</p>}
           {txError && <p className="text-sm text-red-600">{txError}</p>}
-          {transaction && (
-            <div className="mt-2 rounded border border-zinc-200 bg-zinc-50 p-3 text-sm">
-              <div>日付: {transaction.date}</div>
-              <div>イベント名: {transaction.item}</div>
-              <div>金額: {transaction.amount.toLocaleString("ja-JP")} 円</div>
-              <div>感情: {getMoodLabel(transaction.mood_score)}</div>
-              <div>Happy Money: {transaction.happy_amount.toLocaleString("ja-JP")} 円</div>
-            </div>
-          )}
+          {transaction && (() => {
+            // 感情の指数（mood_score）に応じてスタイルを決定
+            const getMoodStyle = () => {
+              if (transaction.mood_score === 0) {
+                // 0：灰色
+                return "border-black bg-gray-100";
+              } else if (transaction.happy_amount > 0) {
+                // プラス：青
+                return "border-blue-500 bg-blue-50";
+              } else if (transaction.happy_amount < 0) {
+                // マイナス：赤
+                return "border-red-500 bg-red-50";
+              } else {
+                // その他：灰色
+                return "border-black bg-gray-100";
+              }
+            };
+            // 日付をyyyy/mm/dd（曜日）形式にフォーマット
+            const formatDateWithWeekday = (dateStr: string) => {
+              const date = new Date(`${dateStr}T00:00:00`);
+              const year = date.getFullYear();
+              const month = String(date.getMonth() + 1).padStart(2, "0");
+              const day = String(date.getDate()).padStart(2, "0");
+              const weekday = date.toLocaleDateString("ja-JP", { weekday: "short" });
+              return `${year}/${month}/${day}（${weekday}）`;
+            };
+            return (
+              <div className="mt-2">
+                <div className="mb-1 text-sm text-zinc-500">
+                  {formatDateWithWeekday(transaction.date)}
+                </div>
+                <div className={`rounded border p-2 ${getMoodStyle()}`}>
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium">{transaction.item}</span>
+                    <div className="flex flex-col items-end">
+                      <span className="text-sm text-zinc-600 whitespace-nowrap">
+                        {transaction.happy_amount >= 0 ? "+" : ""}
+                        {transaction.happy_amount.toLocaleString("ja-JP")}
+                      </span>
+                      <span className="text-xs text-zinc-500">
+                        {transaction.amount.toLocaleString("ja-JP")} 円
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
         </div>
 
         <div className="grid gap-4 lg:grid-cols-2">
           <div className="rounded-lg bg-white p-4 shadow-sm">
-            <div className="mb-2 flex items-center justify-between">
+            <div className="mb-2">
               <h2 className="text-lg font-semibold">チャット</h2>
-              {eventSummary && <span className="text-xs text-zinc-500">{eventSummary}</span>}
             </div>
             <div className="flex h-96 flex-col gap-2 rounded border border-zinc-200 bg-zinc-50 p-3">
-              <div className="flex-1 space-y-3 overflow-y-auto">
+              <div ref={chatContainerRef} className="flex-1 space-y-3 overflow-y-auto">
                 {chat.messages.length === 0 && !chat.streamingAssistant && (
                   <p className="text-sm text-zinc-500">質問を入力してAIに聞いてみましょう。</p>
                 )}
                 {chat.messages.map((m, idx) => (
-                  <div key={idx} className="rounded bg-white p-2 shadow-sm">
-                    <div className="mb-1 text-xs font-semibold text-zinc-500">
-                      {m.role === "user" ? "あなた" : "AI"}
+                  <div
+                    key={idx}
+                    className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
+                  >
+                    <div
+                      className={`relative max-w-[80%] rounded-lg p-3 shadow-sm ${
+                        m.role === "user"
+                          ? "bg-blue-500 text-white"
+                          : "bg-gray-100 text-zinc-900"
+                      }`}
+                    >
+                      <div className="whitespace-pre-wrap text-sm">{m.content}</div>
+                      {/* 吹き出しの三角形 */}
+                      <div
+                        className={`absolute bottom-0 ${
+                          m.role === "user" ? "right-0" : "left-0"
+                        } ${
+                          m.role === "user" ? "-mr-2" : "-ml-2"
+                        }`}
+                        style={{
+                          width: 0,
+                          height: 0,
+                          borderStyle: "solid",
+                          borderWidth: m.role === "user" ? "0 0 12px 12px" : "0 12px 12px 0",
+                          borderColor: m.role === "user"
+                            ? "transparent transparent transparent rgb(59 130 246)"
+                            : "transparent rgb(243 244 246) transparent transparent",
+                        }}
+                      />
                     </div>
-                    <div className="whitespace-pre-wrap text-sm">{m.content}</div>
                   </div>
                 ))}
                 {chat.streamingAssistant !== null && (
-                  <div className="rounded border border-blue-200 bg-blue-50 p-2">
-                    <div className="mb-1 text-xs font-semibold text-blue-600">AI (生成中)</div>
-                    <div className="whitespace-pre-wrap text-sm text-blue-800">
-                      {chat.streamingAssistant || "…"}
+                  <div className="flex justify-start">
+                    <div className="relative max-w-[80%] rounded-lg bg-gray-100 p-3 shadow-sm text-zinc-900">
+                      <div className="mb-1 text-xs font-semibold text-zinc-500">AI (生成中)</div>
+                      <div className="whitespace-pre-wrap text-sm">
+                        {chat.streamingAssistant || "…"}
+                      </div>
+                      {/* 吹き出しの三角形 */}
+                      <div
+                        className="absolute bottom-0 left-0 -ml-2"
+                        style={{
+                          width: 0,
+                          height: 0,
+                          borderStyle: "solid",
+                          borderWidth: "0 12px 12px 0",
+                          borderColor: "transparent rgb(243 244 246) transparent transparent",
+                        }}
+                      />
                     </div>
                   </div>
                 )}
@@ -336,7 +419,7 @@ export default function CreateDiaryPage() {
               <div className="flex items-center gap-2">
                 <input
                   className="flex-1 rounded border border-zinc-300 p-2 text-sm"
-                  placeholder="AIに聞きたいことを入力..."
+                  placeholder="質問に回答..."
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={(e) => {
@@ -348,10 +431,23 @@ export default function CreateDiaryPage() {
                   disabled={chat.streaming}
                 />
                 <button
-                  className="rounded bg-black px-4 py-2 text-sm text-white disabled:opacity-50"
+                  className="flex items-center gap-2 rounded bg-black px-4 py-2 text-sm text-white disabled:opacity-50"
                   onClick={handleSend}
                   disabled={chat.streaming}
                 >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="h-4 w-4"
+                  >
+                    <path d="M22 2L11 13" />
+                    <path d="M22 2l-7 20-4-9-9-4 20-7z" />
+                  </svg>
                   送信
                 </button>
                 {chat.streaming && (
@@ -381,7 +477,7 @@ export default function CreateDiaryPage() {
 
           <div className="rounded-lg bg-white p-4 shadow-sm space-y-3">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold">日記</h2>
+              <h2 className="text-xl font-semibold">日記</h2>
               <span className="text-xs text-zinc-500">AI生成のみ（編集不可）</span>
             </div>
             <div className="space-y-2 rounded border border-zinc-200 bg-zinc-50 p-3">
