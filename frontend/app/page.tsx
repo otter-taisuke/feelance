@@ -4,13 +4,14 @@ import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { LoginPanel } from "@/components/auth/LoginPanel";
-import { DiaryListPanel } from "@/components/diary/DiaryListPanel";
 import { HomeCalendarPanel } from "@/components/home/HomeCalendarPanel";
+import { DiaryListPanel } from "@/components/diary/DiaryListPanel";
 import { AppHeader } from "@/components/layout/AppHeader";
+import { RetrospectivePanel } from "@/components/home/RetrospectivePanel";
 import { login, logout, me } from "@/lib/api";
 import type { User } from "@/lib/types";
 
-type TabKey = "calendar" | "diary";
+type TabKey = "calendar" | "diary" | "retrospective";
 
 const getCurrentMonth = () => {
   const now = new Date();
@@ -55,7 +56,8 @@ export default function Home() {
 
   useEffect(() => {
     const tabParam = searchParams.get("tab");
-    const nextTab: TabKey = tabParam === "diary" ? "diary" : "calendar";
+    const nextTab: TabKey =
+      tabParam === "diary" ? "diary" : tabParam === "retrospective" ? "retrospective" : "calendar";
     setActiveTab(nextTab);
 
     const monthParam = parseMonthParam(searchParams.get("month"));
@@ -135,7 +137,7 @@ export default function Home() {
         <div className="mx-auto flex max-w-5xl flex-col gap-6 px-4 py-8">
           <div className="rounded-lg bg-white p-2 shadow-sm">
             <div className="flex gap-2">
-              {(["calendar", "diary"] as TabKey[]).map((key) => (
+              {(["calendar", "diary", "retrospective"] as TabKey[]).map((key) => (
                 <button
                   key={key}
                   className={`flex-1 rounded px-4 py-2 text-sm font-semibold ${
@@ -145,22 +147,22 @@ export default function Home() {
                   }`}
                   onClick={() => handleTabChange(key)}
                 >
-                  {key === "calendar" ? "カレンダー" : "日記一覧"}
+                  {key === "calendar" ? "カレンダー" : key === "diary" ? "日記一覧" : "振り返り"}
                 </button>
               ))}
             </div>
           </div>
 
           <div>
-            {activeTab === "calendar" ? (
+            {activeTab === "calendar" && (
               <HomeCalendarPanel
                 user={user}
                 selectedMonth={selectedMonth}
                 onChangeMonth={handleMonthChange}
               />
-            ) : (
-              <DiaryListPanel variant="embedded" user={user} />
             )}
+            {activeTab === "diary" && <DiaryListPanel variant="embedded" user={user} />}
+            {activeTab === "retrospective" && user && <RetrospectivePanel user={user} />}
           </div>
         </div>
       )}
