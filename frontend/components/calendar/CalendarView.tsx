@@ -17,6 +17,8 @@ type CalendarEvent = {
   color?: string;
   textColor?: string;
   borderColor?: string;
+  hasDiary?: boolean;
+  diaryId?: string | null;
 };
 
 const FullCalendar = dynamic(() => import("@fullcalendar/react"), { ssr: false });
@@ -201,6 +203,19 @@ export function CalendarView({
         initialView="dayGridMonth"
         height="auto"
         events={events}
+        eventContent={(info) => {
+          const hasDiary = Boolean((info.event.extendedProps as any)?.hasDiary);
+          return (
+            <div className="flex items-center justify-between gap-1 px-1">
+              <span className="truncate text-[11px] leading-tight">{info.event.title}</span>
+              {hasDiary && (
+                <span aria-label="日記あり" title="日記あり" className="text-[12px]">
+                  📖
+                </span>
+              )}
+            </div>
+          );
+        }}
         initialDate={selectedDate}
         dateClick={(info) => onDateClick(info.dateStr)}
         eventClick={handleEventClick}
