@@ -280,7 +280,7 @@ export function RetrospectivePanel({ user, months = 12 }: Props) {
     <div className="flex flex-col gap-6">
       <div className={`${SECTION_CLASS} flex flex-col gap-4`}>
         <div className="flex items-center gap-3">
-          <HappyChan size="small" />
+          <HappyChan size="medium" />
           <div>
             <h2 className="text-lg font-semibold">ハッピーちゃんのまとめ（過去1年）</h2>
             <p className="text-sm text-zinc-600">

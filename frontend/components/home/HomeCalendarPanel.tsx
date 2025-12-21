@@ -12,6 +12,7 @@ import {
   YAxis,
 } from "recharts";
 
+import { HappyChan } from "@/components/common/HappyChan";
 import { CalendarView } from "@/components/calendar/CalendarView";
 import { DayModal } from "@/components/modals/DayModal";
 import { DiarySelectEventModal } from "@/components/modals/DiarySelectEventModal";
@@ -522,7 +523,12 @@ export function HomeCalendarPanel({ user, selectedMonth, onChangeMonth }: HomeCa
     <div className="flex flex-col gap-6">
       <div className="rounded-lg bg-white p-4 shadow-sm">
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-lg font-semibold">カレンダー</h2>
+          <div className="flex items-center gap-3">
+            <HappyChan size="medium" variant="standard" />
+            <div>
+              <h1 className="text-2xl font-bold">カレンダー</h1>
+            </div>
+          </div>
           <button
             className="rounded border border-blue-500 px-3 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-50 disabled:opacity-50"
             onClick={() => setShowDiarySelectModal(true)}
