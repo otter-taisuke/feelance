@@ -359,13 +359,11 @@ export function DiaryListPanel({ variant = "standalone", user: externalUser = nu
                 <p className="text-xs text-zinc-500">条件を指定すると全期間を対象に検索します</p>
               </div>
               <div className="flex items-center gap-2">
-                <div
-                  className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                    useAllTime ? "bg-black text-white" : "bg-zinc-100 text-zinc-700"
-                  }`}
-                >
-                  {useAllTime ? "全期間を検索" : viewMode === "month" ? `${currentYear}年${currentMonth}月` : `${currentYear}年`}
-                </div>
+                {useAllTime && (
+                  <div className="rounded-full bg-black px-3 py-1 text-xs font-semibold text-white">
+                    全期間を検索
+                  </div>
+                )}
                 <button
                   type="button"
                   className="flex h-9 w-9 items-center justify-center rounded-full text-2xl text-zinc-700 transition hover:bg-zinc-100 hover:text-black"
