@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 
 import { logout, me } from "@/lib/api";
 import type { User } from "@/lib/types";
@@ -14,6 +15,7 @@ type AppHeaderProps = {
 export function AppHeader({ user: controlledUser, onLogout }: AppHeaderProps) {
   const [selfUser, setSelfUser] = useState<User | null>(controlledUser ?? null);
   const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
   const user = useMemo(
     () => (controlledUser !== undefined ? controlledUser : selfUser),
@@ -45,12 +47,14 @@ export function AppHeader({ user: controlledUser, onLogout }: AppHeaderProps) {
     if (!user) return;
     if (onLogout) {
       await onLogout();
+      router.push("/");
       return;
     }
     setLoading(true);
     try {
       await logout();
       setSelfUser(null);
+      router.push("/");
     } finally {
       setLoading(false);
     }
