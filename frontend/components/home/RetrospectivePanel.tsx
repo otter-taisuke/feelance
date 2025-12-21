@@ -40,13 +40,14 @@ const MOOD_COLORS: Record<number, string> = {
 const MOOD_TILE_COLORS: Record<number, string> = {
   2: "#2563eb", // 濃い青
   1: "#93c5fd", // 薄い青
-  0: "#e5e7eb", // 灰
+  0: "#e5e7eb", // 灰（記録ありのニュートラル）
   [-1]: "#fecdd3", // 薄い赤
   [-2]: "#ef4444", // 赤
 };
-const EMPTY_TILE_COLOR = "#f8fafc";
+const EMPTY_TILE_COLOR = "#f8fafc"; // 1年範囲外パディング
+const NO_ENTRY_TILE_COLOR = "#f1f5f9"; // 記録なし（ニュートラルと区別）
 
-type HeatmapCell = { date: string | null; mood: number | null; count: number };
+type HeatmapCell = { date: string | null; mood: number | null; count: number; recorded: boolean };
 
 const SECTION_CLASS = "rounded-lg bg-white p-4 shadow-sm";
 
@@ -244,7 +245,7 @@ export function RetrospectivePanel({ user, months = 12 }: Props) {
 
     const startPad = start.getDay();
     for (let i = 0; i < startPad; i += 1) {
-      cells.push({ date: null, mood: null, count: 0 });
+      cells.push({ date: null, mood: null, count: 0, recorded: false });
     }
 
     for (
@@ -254,16 +255,18 @@ export function RetrospectivePanel({ user, months = 12 }: Props) {
     ) {
       const dateStr = cursor.toISOString().slice(0, 10);
       const hit = map.get(dateStr);
+      const recorded = (hit?.count ?? 0) > 0;
       cells.push({
         date: dateStr,
-        mood: hit?.mood_score ?? 0,
+        mood: recorded ? hit?.mood_score ?? 0 : null,
         count: hit?.count ?? 0,
+        recorded,
       });
     }
 
     const endPad = 6 - today.getDay();
     for (let i = 0; i < endPad; i += 1) {
-      cells.push({ date: null, mood: null, count: 0 });
+      cells.push({ date: null, mood: null, count: 0, recorded: false });
     }
 
     const weeks: HeatmapCell[][] = [];
@@ -277,7 +280,7 @@ export function RetrospectivePanel({ user, months = 12 }: Props) {
     <div className="flex flex-col gap-6">
       <div className={`${SECTION_CLASS} flex flex-col gap-4`}>
         <div className="flex items-center gap-3">
-          <HappyChan size="small" />
+          <HappyChan size="medium" />
           <div>
             <h2 className="text-lg font-semibold">ハッピーちゃんのまとめ（過去1年）</h2>
             <p className="text-sm text-zinc-600">
@@ -386,6 +389,13 @@ export function RetrospectivePanel({ user, months = 12 }: Props) {
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-lg font-semibold">心の草（過去1年）</h2>
           <div className="flex items-center gap-2 text-xs text-zinc-600">
+            <span className="flex items-center gap-1">
+              <span
+                className="inline-block h-3 w-3 rounded-[2px] border border-zinc-200"
+                style={{ backgroundColor: NO_ENTRY_TILE_COLOR }}
+              />
+              <span>未記入</span>
+            </span>
             {[2, 1, 0, -1, -2].map((score) => (
               <span key={score} className="flex items-center gap-1">
                 <span
@@ -404,20 +414,28 @@ export function RetrospectivePanel({ user, months = 12 }: Props) {
             {heatmapWeeks.map((week, idx) => (
               <div key={`week-${idx}`} className="grid grid-rows-7 gap-[3px]">
                 {week.map((cell, dayIdx) => {
+                  const borderClass =
+                    cell.date === null
+                      ? "border-zinc-200/60"
+                      : cell.recorded
+                        ? "border-zinc-400"
+                        : "border-zinc-200/60";
                   const color =
                     cell.date === null
                       ? EMPTY_TILE_COLOR
-                      : MOOD_TILE_COLORS[cell.mood ?? 0] ?? MOOD_TILE_COLORS[0];
+                      : cell.recorded
+                        ? MOOD_TILE_COLORS[cell.mood ?? 0] ?? MOOD_TILE_COLORS[0]
+                        : NO_ENTRY_TILE_COLOR;
                   const label =
                     cell.date === null
                       ? ""
-                      : `${cell.date.replace(/-/g, "/")} | ${getMoodLabel(cell.mood ?? 0)} | ${
-                          cell.count
-                        }件`;
+                      : cell.recorded
+                        ? `${cell.date.replace(/-/g, "/")} | ${getMoodLabel(cell.mood ?? 0)} | ${cell.count}件`
+                        : `${cell.date.replace(/-/g, "/")} | 記録なし`;
                   return (
                     <div
                       key={`${cell.date ?? "empty"}-${dayIdx}`}
-                      className="h-3 w-3 rounded-[3px] border border-zinc-200/60"
+                      className={`h-3 w-3 rounded-[3px] border ${borderClass}`}
                       style={{ backgroundColor: color }}
                       title={label}
                       aria-label={cell.date ? label : undefined}

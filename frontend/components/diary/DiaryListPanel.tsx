@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
+import { HappyChan } from "@/components/common/HappyChan";
 import { LoginPanel } from "@/components/auth/LoginPanel";
 import { AppHeader } from "@/components/layout/AppHeader";
 import { fetchDiaries, login, logout, me } from "@/lib/api";
@@ -228,9 +229,11 @@ export function DiaryListPanel({ variant = "standalone", user: externalUser = nu
   const bodyContent = (
     <div className="rounded-lg bg-white p-6 shadow-sm space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-col gap-1">
-          <h1 className="text-2xl font-bold">日記一覧</h1>
-          <p className="text-sm text-zinc-600">作成済みの日記を月別・年別に閲覧できます</p>
+        <div className="flex items-center gap-3">
+          <HappyChan size="medium" variant="excited" />
+          <div>
+            <h1 className="text-2xl font-bold">日記一覧</h1>
+          </div>
         </div>
         {!useExternalAuth && (
           <div className="flex items-center gap-2">
@@ -283,21 +286,19 @@ export function DiaryListPanel({ variant = "standalone", user: externalUser = nu
             </div>
             <div className="flex items-center justify-center gap-2">
               <button
-                className={`rounded border px-3 py-1 text-sm ${
-                  viewMode === "month"
+                className={`rounded border px-3 py-1 text-sm ${viewMode === "month"
                     ? "border-black bg-black text-white"
                     : "border-zinc-300 text-zinc-700 hover:border-zinc-500"
-                }`}
+                  }`}
                 onClick={() => setViewMode("month")}
               >
                 月別
               </button>
               <button
-                className={`rounded border px-3 py-1 text-sm ${
-                  viewMode === "year"
+                className={`rounded border px-3 py-1 text-sm ${viewMode === "year"
                     ? "border-black bg-black text-white"
                     : "border-zinc-300 text-zinc-700 hover:border-zinc-500"
-                }`}
+                  }`}
                 onClick={() => setViewMode("year")}
               >
                 年別
@@ -359,13 +360,11 @@ export function DiaryListPanel({ variant = "standalone", user: externalUser = nu
                 <p className="text-xs text-zinc-500">条件を指定すると全期間を対象に検索します</p>
               </div>
               <div className="flex items-center gap-2">
-                <div
-                  className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                    useAllTime ? "bg-black text-white" : "bg-zinc-100 text-zinc-700"
-                  }`}
-                >
-                  {useAllTime ? "全期間を検索" : viewMode === "month" ? `${currentYear}年${currentMonth}月` : `${currentYear}年`}
-                </div>
+                {useAllTime && (
+                  <div className="rounded-full bg-black px-3 py-1 text-xs font-semibold text-white">
+                    全期間を検索
+                  </div>
+                )}
                 <button
                   type="button"
                   className="flex h-9 w-9 items-center justify-center rounded-full text-2xl text-zinc-700 transition hover:bg-zinc-100 hover:text-black"
@@ -408,9 +407,8 @@ export function DiaryListPanel({ variant = "standalone", user: externalUser = nu
             )}
 
             <div
-              className={`overflow-hidden transition-all duration-300 ${
-                filtersOpen ? "max-h-[1600px] opacity-100" : "max-h-0 opacity-0"
-              }`}
+              className={`overflow-hidden transition-all duration-300 ${filtersOpen ? "max-h-[1600px] opacity-100" : "max-h-0 opacity-0"
+                }`}
               aria-hidden={!filtersOpen}
             >
               <div className="space-y-3 pt-2">
@@ -465,11 +463,10 @@ export function DiaryListPanel({ variant = "standalone", user: externalUser = nu
                         <button
                           key={m.value}
                           type="button"
-                          className={`rounded border px-3 py-2 text-sm transition ${
-                            active
+                          className={`rounded border px-3 py-2 text-sm transition ${active
                               ? "border-black bg-black text-white"
                               : "border-zinc-300 bg-white text-zinc-800 hover:border-zinc-500"
-                          }`}
+                            }`}
                           onClick={() => setSentiment(m.value)}
                         >
                           {m.label}
@@ -607,7 +604,7 @@ export function DiaryListPanel({ variant = "standalone", user: externalUser = nu
               </div>
               <button
                 className="rounded border border-zinc-300 px-3 py-1 text-sm text-zinc-700 hover:border-zinc-500"
-              onClick={closeModal}
+                onClick={closeModal}
               >
                 閉じる
               </button>

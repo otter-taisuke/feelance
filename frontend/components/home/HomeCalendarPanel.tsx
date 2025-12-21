@@ -12,12 +12,14 @@ import {
   YAxis,
 } from "recharts";
 
+import { HappyChan } from "@/components/common/HappyChan";
 import { CalendarView } from "@/components/calendar/CalendarView";
 import { DayModal } from "@/components/modals/DayModal";
 import { DiarySelectEventModal } from "@/components/modals/DiarySelectEventModal";
 import { useTransactions } from "@/hooks/useTransactions";
+import { fetchDiaries } from "@/lib/api";
 import { moodOptions } from "@/lib/mood";
-import type { Transaction, TransactionForm, User } from "@/lib/types";
+import type { DiaryEntry, Transaction, TransactionForm, User } from "@/lib/types";
 
 type Granularity = "day" | "month" | "year";
 
@@ -84,6 +86,14 @@ export function HomeCalendarPanel({ user, selectedMonth, onChangeMonth }: HomeCa
     amount: "",
     mood_score: 0,
   });
+  const [diaryMap, setDiaryMap] = useState<Record<string, string>>({});
+  const [diaryModal, setDiaryModal] = useState<{
+    title: string;
+    body: string;
+    eventTitle: string;
+    date?: string;
+  } | null>(null);
+  const [diaryModalLoading, setDiaryModalLoading] = useState(false);
 
   const {
     transactions,
@@ -140,8 +150,10 @@ export function HomeCalendarPanel({ user, selectedMonth, onChangeMonth }: HomeCa
         color: t.mood_score === 0 ? HAPPY_NEUTRAL_COLOR : t.happy_amount < 0 ? HAPPY_NEGATIVE_COLOR : HAPPY_POSITIVE_COLOR,
         textColor: t.mood_score === 0 ? HAPPY_NEUTRAL_TEXT_COLOR : "#fff",
         borderColor: t.mood_score === 0 ? HAPPY_NEUTRAL_BORDER_COLOR : "transparent",
+        hasDiary: Boolean(diaryMap[t.id]),
+        diaryId: diaryMap[t.id] ?? null,
       })),
-    [transactions],
+    [transactions, diaryMap],
   );
 
   const selectedMonthInfo = useMemo(() => {
@@ -410,6 +422,31 @@ export function HomeCalendarPanel({ user, selectedMonth, onChangeMonth }: HomeCa
     router.push(`/diary/create?tx_id=${form.id}`);
   };
 
+  const handleOpenDiary = async (txId: string) => {
+    setShowModal(false);
+    setDiaryModalLoading(true);
+    setError(null);
+    const tx = transactions.find((t) => t.id === txId);
+    try {
+      const diaries = await fetchDiaries({ tx_id: txId });
+      const entry: DiaryEntry | undefined = diaries[0];
+      if (!entry) {
+        setError("このイベントの日記が見つかりませんでした");
+        return;
+      }
+      setDiaryModal({
+        title: entry.diary_title || tx?.item || "タイトルなし",
+        body: entry.diary_body,
+        eventTitle: entry.event_name || tx?.item || "イベント",
+        date: entry.transaction_date ?? undefined,
+      });
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setDiaryModalLoading(false);
+    }
+  };
+
   const openModalForDate = (dateStr: string) => {
     setDateAndSyncMonth(dateStr);
     resetForm(dateStr);
@@ -437,6 +474,40 @@ export function HomeCalendarPanel({ user, selectedMonth, onChangeMonth }: HomeCa
     });
   };
 
+  useEffect(() => {
+    if (!user) {
+      setDiaryMap({});
+      return;
+    }
+    const [yearStr, monthStr] = selectedMonth.split("-");
+    const year = Number(yearStr);
+    const month = Number(monthStr);
+    if (!Number.isFinite(year) || !Number.isFinite(month)) return;
+
+    let cancelled = false;
+    const loadDiaries = async () => {
+      try {
+        const diaries = await fetchDiaries({ year, month });
+        if (cancelled) return;
+        const map: Record<string, string> = {};
+        diaries.forEach((d) => {
+          if (d.tx_id) {
+            map[d.tx_id] = d.id;
+          }
+        });
+        setDiaryMap(map);
+      } catch {
+        if (!cancelled) {
+          setDiaryMap({});
+        }
+      }
+    };
+    loadDiaries();
+    return () => {
+      cancelled = true;
+    };
+  }, [user, selectedMonth]);
+
   const formatYen = (v: number) =>
     new Intl.NumberFormat("ja-JP", { style: "currency", currency: "JPY" }).format(v);
 
@@ -452,7 +523,12 @@ export function HomeCalendarPanel({ user, selectedMonth, onChangeMonth }: HomeCa
     <div className="flex flex-col gap-6">
       <div className="rounded-lg bg-white p-4 shadow-sm">
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-lg font-semibold">カレンダー</h2>
+          <div className="flex items-center gap-3">
+            <HappyChan size="medium" variant="standard" />
+            <div>
+              <h1 className="text-2xl font-bold">カレンダー</h1>
+            </div>
+          </div>
           <button
             className="rounded border border-blue-500 px-3 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-50 disabled:opacity-50"
             onClick={() => setShowDiarySelectModal(true)}
@@ -673,6 +749,7 @@ export function HomeCalendarPanel({ user, selectedMonth, onChangeMonth }: HomeCa
         open={showModal}
         selectedDate={selectedDate}
         dayTransactions={dayTransactions}
+        diaryMap={diaryMap}
         form={form}
         moodOptions={moodOptions}
         saving={saving}
@@ -683,6 +760,7 @@ export function HomeCalendarPanel({ user, selectedMonth, onChangeMonth }: HomeCa
         onDelete={form.id ? () => handleDelete(form.id!) : undefined}
         onSelectTx={pickTransaction}
         onDiaryExisting={form.id ? handleDiaryExisting : undefined}
+        onOpenDiary={handleOpenDiary}
         onClose={() => {
           setShowModal(false);
           setStartInEventList(false);
@@ -700,6 +778,42 @@ export function HomeCalendarPanel({ user, selectedMonth, onChangeMonth }: HomeCa
         }}
         onClose={() => setShowDiarySelectModal(false)}
       />
+      {diaryModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4"
+          onClick={() => setDiaryModal(null)}
+          role="presentation"
+        >
+          <div
+            className="w-full max-w-2xl rounded-lg bg-white p-6 shadow-lg"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <div className="text-sm font-semibold text-zinc-600">{diaryModal.date}</div>
+                <h3 className="text-lg font-semibold text-zinc-900">{diaryModal.title}</h3>
+                <p className="text-sm text-zinc-500">イベント: {diaryModal.eventTitle}</p>
+              </div>
+              <button
+                className="text-sm text-zinc-500 hover:font-semibold"
+                onClick={() => setDiaryModal(null)}
+              >
+                閉じる
+              </button>
+            </div>
+            <div className="mt-4 whitespace-pre-line text-sm leading-relaxed text-zinc-800">
+              {diaryModal.body}
+            </div>
+          </div>
+        </div>
+      )}
+      {diaryModalLoading && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 text-white">
+          日記を読み込み中…
+        </div>
+      )}
     </div>
   );
 }

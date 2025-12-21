@@ -10,6 +10,7 @@ type Props = {
   open: boolean;
   selectedDate: string;
   dayTransactions: Transaction[];
+  diaryMap?: Record<string, string | undefined>;
   form: FormState;
   moodOptions: MoodOption[];
   saving: boolean;
@@ -20,6 +21,7 @@ type Props = {
   onDelete?: () => void;
   onSelectTx: (tx: Transaction) => void;
   onDiaryExisting?: () => void;
+  onOpenDiary?: (txId: string) => void;
   onClose: () => void;
   startInEventList: boolean;
   formatYen: (v: number) => string;
@@ -29,6 +31,7 @@ export function DayModal({
   open,
   selectedDate,
   dayTransactions,
+  diaryMap,
   form,
   moodOptions,
   saving,
@@ -39,6 +42,7 @@ export function DayModal({
   onDelete,
   onSelectTx,
   onDiaryExisting,
+  onOpenDiary,
   onClose,
   startInEventList,
   formatYen,
@@ -96,6 +100,8 @@ export function DayModal({
   const hasSelection = Boolean(form.id);
   const editDisabled = !hasSelection;
   const diaryDisabled = !hasSelection || !onDiaryExisting || saving;
+  const hasDiaryForSelection = form.id ? Boolean(diaryMap?.[form.id]) : false;
+  const diaryOpenDisabled = !hasSelection || !hasDiaryForSelection || !onOpenDiary;
   const pressableClass = "transition active:translate-y-[1px] active:scale-[0.99]";
 
   return (
@@ -161,6 +167,7 @@ export function DayModal({
                         return isSelected ? "border-gray-700 bg-gray-200" : "border-black bg-gray-100";
                       }
                     };
+                    const hasDiary = Boolean(diaryMap?.[tx.id]);
                     return (
                       <button
                         key={tx.id}
@@ -169,8 +176,15 @@ export function DayModal({
                         } ${getHappyMoneyStyle()}`}
                         onClick={() => onSelectTx(tx)}
                       >
-                      <div className="flex items-center justify-between">
-                        <span className="font-medium">{tx.item}</span>
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-1">
+                          <span className="font-medium">{tx.item}</span>
+                          {hasDiary && (
+                            <span aria-label="日記あり" title="日記あり" className="text-xs">
+                              📖
+                            </span>
+                          )}
+                        </div>
                         <div className="flex flex-col items-end">
                           <span className="text-sm text-zinc-600 whitespace-nowrap">
                             {tx.happy_amount >= 0 ? "+" : ""}{tx.happy_amount.toLocaleString("ja-JP")}♡
@@ -211,6 +225,17 @@ export function DayModal({
                   disabled={diaryDisabled}
                 >
                   日記作成
+                </button>
+                <button
+                  className={`rounded px-4 py-2 text-sm font-semibold ${pressableClass} ${
+                    diaryOpenDisabled
+                      ? "cursor-not-allowed bg-zinc-200 text-zinc-400"
+                      : "bg-blue-600 text-white shadow-sm hover:bg-blue-700"
+                  }`}
+                  onClick={() => form.id && onOpenDiary?.(form.id)}
+                  disabled={diaryOpenDisabled}
+                >
+                  日記を開く
                 </button>
               </div>
             </div>
